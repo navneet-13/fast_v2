@@ -1,0 +1,146 @@
+==============================================
+Dynamo commit vs nocommit — accuracy-focused sweep
+Detected 8 GPU(s): 0 1 2 3 4 5 6 7
+GPU memory busy threshold: 1000 MB
+==============================================
+
+Current GPU Status (memory + compute processes):
+----------------------------------------------
+  GPU 0: 2MB / 23028MB - AVAILABLE
+  GPU 1: 2MB / 23028MB - AVAILABLE
+  GPU 2: 5MB / 23028MB - AVAILABLE
+  GPU 3: 2MB / 23028MB - AVAILABLE
+  GPU 4: 2MB / 23028MB - AVAILABLE
+  GPU 5: 2MB / 23028MB - AVAILABLE
+  GPU 6: 2MB / 23028MB - AVAILABLE
+  GPU 7: 2MB / 23028MB - AVAILABLE
+----------------------------------------------
+==============================================
+Logs: logs/commit_compare_20260324_025742
+==============================================
+
+Configurations: 20 total (8 GPU slots), starting from #1
+
+----------------------------------------------
+[1/20] Dynamo commit eager compact bs=1
+  [GPU 0] Starting: Dynamo commit eager compact bs=1
+    Log: logs/commit_compare_20260324_025742/dynamo_commit_eager_compact/bs_1.log
+    PID: 3481503
+----------------------------------------------
+[2/20] Dynamo nocommit eager compact bs=1
+  [GPU 1] Starting: Dynamo nocommit eager compact bs=1
+    Log: logs/commit_compare_20260324_025742/dynamo_nocommit_eager_compact/bs_1.log
+    PID: 3481602
+----------------------------------------------
+[3/20] Dynamo commit compile compact bs=1
+  [GPU 2] Starting: Dynamo commit compile compact bs=1
+    Log: logs/commit_compare_20260324_025742/dynamo_commit_compile_compact/bs_1.log
+    PID: 3481711
+----------------------------------------------
+[4/20] Dynamo nocommit compile compact bs=1
+  [GPU 3] Starting: Dynamo nocommit compile compact bs=1
+    Log: logs/commit_compare_20260324_025742/dynamo_nocommit_compile_compact/bs_1.log
+    PID: 3481807
+----------------------------------------------
+[5/20] Dynamo commit eager compact bs=2
+  [GPU 4] Starting: Dynamo commit eager compact bs=2
+    Log: logs/commit_compare_20260324_025742/dynamo_commit_eager_compact/bs_2.log
+    PID: 3482076
+----------------------------------------------
+[6/20] Dynamo nocommit eager compact bs=2
+  [GPU 5] Starting: Dynamo nocommit eager compact bs=2
+    Log: logs/commit_compare_20260324_025742/dynamo_nocommit_eager_compact/bs_2.log
+    PID: 3482235
+----------------------------------------------
+[7/20] Dynamo commit compile compact bs=2
+  [GPU 6] Starting: Dynamo commit compile compact bs=2
+    Log: logs/commit_compare_20260324_025742/dynamo_commit_compile_compact/bs_2.log
+    PID: 3482380
+----------------------------------------------
+[8/20] Dynamo nocommit compile compact bs=2
+  [GPU 7] Starting: Dynamo nocommit compile compact bs=2
+    Log: logs/commit_compare_20260324_025742/dynamo_nocommit_compile_compact/bs_2.log
+    PID: 3482528
+----------------------------------------------
+[9/20] Dynamo commit eager compact bs=4
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 5] Starting: Dynamo commit eager compact bs=4
+    Log: logs/commit_compare_20260324_025742/dynamo_commit_eager_compact/bs_4.log
+    PID: 3484792
+----------------------------------------------
+[10/20] Dynamo nocommit eager compact bs=4
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 7] Starting: Dynamo nocommit eager compact bs=4
+    Log: logs/commit_compare_20260324_025742/dynamo_nocommit_eager_compact/bs_4.log
+    PID: 3484957
+----------------------------------------------
+[11/20] Dynamo commit compile compact bs=4
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 4] Starting: Dynamo commit compile compact bs=4
+    Log: logs/commit_compare_20260324_025742/dynamo_commit_compile_compact/bs_4.log
+    PID: 3485159
+----------------------------------------------
+[12/20] Dynamo nocommit compile compact bs=4
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 6] Starting: Dynamo nocommit compile compact bs=4
+    Log: logs/commit_compare_20260324_025742/dynamo_nocommit_compile_compact/bs_4.log
+    PID: 3485344
+----------------------------------------------
+[13/20] Dynamo commit eager compact bs=8
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 3] Starting: Dynamo commit eager compact bs=8
+    Log: logs/commit_compare_20260324_025742/dynamo_commit_eager_compact/bs_8.log
+    PID: 3485957
+----------------------------------------------
+[14/20] Dynamo nocommit eager compact bs=8
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 2] Starting: Dynamo nocommit eager compact bs=8
+    Log: logs/commit_compare_20260324_025742/dynamo_nocommit_eager_compact/bs_8.log
+    PID: 3486215
+----------------------------------------------
+[15/20] Dynamo commit compile compact bs=8
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 1] Starting: Dynamo commit compile compact bs=8
+    Log: logs/commit_compare_20260324_025742/dynamo_commit_compile_compact/bs_8.log
+    PID: 3486402
+----------------------------------------------
+[16/20] Dynamo nocommit compile compact bs=8
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 0] Starting: Dynamo nocommit compile compact bs=8
+    Log: logs/commit_compare_20260324_025742/dynamo_nocommit_compile_compact/bs_8.log
+    PID: 3486709
+----------------------------------------------
+[17/20] Dynamo commit eager compact bs=16
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 7] Starting: Dynamo commit eager compact bs=16
+    Log: logs/commit_compare_20260324_025742/dynamo_commit_eager_compact/bs_16.log
+    PID: 3487511
+----------------------------------------------
+[18/20] Dynamo nocommit eager compact bs=16
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 5] Starting: Dynamo nocommit eager compact bs=16
+    Log: logs/commit_compare_20260324_025742/dynamo_nocommit_eager_compact/bs_16.log
+    PID: 3487710
+----------------------------------------------
+[19/20] Dynamo commit compile compact bs=16
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 6] Starting: Dynamo commit compile compact bs=16
+    Log: logs/commit_compare_20260324_025742/dynamo_commit_compile_compact/bs_16.log
+    PID: 3487939
+----------------------------------------------
+[20/20] Dynamo nocommit compile compact bs=16
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 4] Starting: Dynamo nocommit compile compact bs=16
+    Log: logs/commit_compare_20260324_025742/dynamo_nocommit_compile_compact/bs_16.log
+    PID: 3488167
+
+==============================================
+All configs scheduled. Waiting for jobs...
+==============================================
+
+==============================================
+DONE. Logs under: logs/commit_compare_20260324_025742/
+  dynamo_commit_<mode>_<batch>/bs_*.log
+  dynamo_nocommit_<mode>_<batch>/bs_*.log
+Compare accuracy lines (e.g. exact match) in each log.
+==============================================

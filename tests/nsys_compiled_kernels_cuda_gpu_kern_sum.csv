@@ -1,0 +1,24 @@
+Time (%),Total Time (ns),Instances,Avg (ns),Med (ns),Min (ns),Max (ns),StdDev (ns),Name
+54.5,148585860,285,521353.9,481309.0,425086,3061681,335585.0,ampere_bf16_s16816gemm_bf16_256x128_ldg8_f2f_stages_32x3_tn
+25.6,69736170,280,249057.8,234207.0,67775,424990,165213.1,ampere_bf16_s16816gemm_bf16_128x128_ldg8_f2f_stages_32x5_tn
+5.5,15086997,140,107764.3,107936.0,103359,110271,1237.8,ampere_bf16_s16816gemm_bf16_128x64_ldg8_relu_f2f_stages_32x6_tn
+3.9,10772781,140,76948.4,78464.0,64640,80160,4292.2,"void flash::flash_fwd_kernel<Flash_fwd_kernel_traits<(int)128, (int)128, (int)32, (int)4, (bool)0, (bool)0, cutlass::bfloat16_t, Flash_kernel_traits<(int)128, (int)128, (int)32, (int)4, cutlass::bfloat16_t>>, (bool)0, (bool)0, (bool)0, (bool)0, (bool)0, (bool)1, (bool)0, (bool)0>(flash::Flash_fwd_params)"
+2.4,6440157,140,46001.1,45984.0,45183,47008,370.4,triton_poi_fused__unsafe_view_mul_silu_7
+1.9,5151432,280,18398.0,18368.0,15840,20992,769.4,ampere_bf16_s16816gemm_bf16_128x64_ldg8_f2f_stages_32x6_tn
+1.4,3774506,280,13480.4,13392.0,11072,15328,1550.3,triton_poi_fused__to_copy_add_bmm_cat_cos_mul_neg_scatter_sin_slice_transpose_unsqueeze_view_4
+1.2,3372110,280,12043.3,12064.0,11264,12512,271.1,triton_poi_fused_copy__5
+1.0,2667501,280,9526.8,9600.0,8448,10144,323.4,"void at::native::_scatter_gather_elementwise_kernel<(int)128, (int)8, void at::native::_cuda_scatter_gather_internal_kernel<(bool)1, at::native::OpaqueType<(int)2>, long>::operator ()<at::native::TensorAssign>(at::TensorIterator &, long, long, long, const T1 &)::[lambda(int) (instance 1)]>(int, T3)"
+0.6,1612472,140,11517.7,11680.0,10048,11904,450.9,triton_poi_fused__to_copy_add_bmm_cat_cos_flash_kvcache_mul_neg_sin_slice_transpose_unsqueeze_view_3
+0.4,1184892,65,18229.1,18272.0,17376,18624,266.8,triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt_13
+0.4,1149051,280,4103.8,4128.0,3200,4704,209.4,"void cublasLt::splitKreduce_kernel<(int)32, (int)16, int, __nv_bfloat16, __nv_bfloat16, float, __nv_bfloat16, (bool)0, __nv_bfloat16, __nv_bfloat16, __nv_bfloat16, (bool)1, (bool)1, (bool)0>(cublasLt::cublasSplitKParams<T6>, const T4 *, const T10 *, T9 *, T5 *, const T6 *, const T6 *, const T11 *, const T4 *, T11 *, void *, long, T6 *, int *, T6 *, T6 *, const T6 *, const T6 *, const T6 *, const T6 *, const T6 *)"
+0.4,996478,65,15330.4,15360.0,14272,15904,283.3,triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt_12
+0.3,805594,65,12393.8,12448.0,11488,12960,290.6,triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt_11
+0.2,646267,140,4616.2,4655.5,3840,4896,185.5,triton_poi_fused__to_copy_add_bmm_cat_cos_mul_neg_sin_slice_transpose_unsqueeze_view_2
+0.2,503804,65,7750.8,7712.0,6976,8512,345.1,triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt_10
+0.0,75232,5,15046.4,15104.0,14400,15488,415.0,triton_red_fused__to_copy__unsafe_view_add_embedding_mean_mul_pow_rsqrt_9
+0.0,58144,5,11628.8,11840.0,11008,11936,388.4,triton_red_fused__to_copy__unsafe_view_add_embedding_mean_mul_pow_rsqrt_8
+0.0,48063,5,9612.6,9887.0,8288,10112,748.2,triton_red_fused__to_copy_add_embedding_mean_mul_pow_rsqrt_1
+0.0,47392,5,9478.4,9664.0,8544,9856,529.4,triton_red_fused__to_copy__unsafe_view_add_embedding_mean_mul_pow_rsqrt_6
+0.0,45311,5,9062.2,9152.0,8640,9280,261.4,triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt_14
+0.0,11264,5,2252.8,2272.0,2144,2304,62.4,"void gemmk1_kernel<int, float, (int)256, (int)5, (bool)0, (bool)0, (bool)0, (bool)0, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<float>, float, (int)0>(cublasGemmk1Params<T2, T9, T10, T11, T12, biasType<T11::value_type, T12>::type>)"
+0.0,9280,5,1856.0,1920.0,1600,1952,144.9,triton_poi_fused__to_copy_unsqueeze_0

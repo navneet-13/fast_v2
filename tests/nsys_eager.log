@@ -1,0 +1,81 @@
+[eager] GPU: NVIDIA RTX A5000
+[eager] BS=8, past_blocks=10, past_seq_len=320
+[eager] Loading model...
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards: 100%|██████████| 4/4 [00:00<00:00, 97.79it/s]
+2026-03-26:14:17:59 INFO     [utils.attention_backends] [attention_backend] SKIPPED: flash4  gpu=SM 8.6  reason=SM < 9.0
+2026-03-26:14:17:59 INFO     [utils.attention_backends] [attention_backend] SKIPPED: flash3  gpu=SM 8.6  reason=flash_attn_3 package not installed
+2026-03-26:14:17:59 INFO     [utils.attention_backends] [attention_backend] SELECTED: flash2 (with kvcache)  gpu=SM 8.6  requested='auto'
+Capture range started in the application.
+Capture range ended in the application.
+Generating '/tmp/nsys-n41/nsys-report-9f31.qdstrm'
+[1/8] [0%                          ] nsys_eager.nsys-repProcessing events...
+[1/8] [0%                          ] nsys_eager.nsys-rep[1/8] [11%                         ] nsys_eager.nsys-rep[1/8] [===22%                      ] nsys_eager.nsys-rep[1/8] [==============61%           ] nsys_eager.nsys-rep[1/8] [========================100%] nsys_eager.nsys-rep[1/8] [========================100%] nsys_eager.nsys-rep
+[2/8] [0%                          ] nsys_eager.sqlite[2/8] [1%                          ] nsys_eager.sqlite[2/8] [2%                          ] nsys_eager.sqlite[2/8] [3%                          ] nsys_eager.sqlite[2/8] [4%                          ] nsys_eager.sqlite[2/8] [5%                          ] nsys_eager.sqlite[2/8] [6%                          ] nsys_eager.sqlite[2/8] [7%                          ] nsys_eager.sqlite[2/8] [8%                          ] nsys_eager.sqlite[2/8] [9%                          ] nsys_eager.sqlite[2/8] [10%                         ] nsys_eager.sqlite[2/8] [11%                         ] nsys_eager.sqlite[2/8] [12%                         ] nsys_eager.sqlite[2/8] [13%                         ] nsys_eager.sqlite[2/8] [14%                         ] nsys_eager.sqlite[2/8] [=15%                        ] nsys_eager.sqlite[2/8] [=16%                        ] nsys_eager.sqlite[2/8] [=17%                        ] nsys_eager.sqlite[2/8] [==18%                       ] nsys_eager.sqlite[2/8] [==19%                       ] nsys_eager.sqlite[2/8] [==20%                       ] nsys_eager.sqlite[2/8] [==21%                       ] nsys_eager.sqlite[2/8] [===22%                      ] nsys_eager.sqlite[2/8] [===23%                      ] nsys_eager.sqlite[2/8] [===24%                      ] nsys_eager.sqlite[2/8] [====25%                     ] nsys_eager.sqlite[2/8] [====26%                     ] nsys_eager.sqlite[2/8] [====27%                     ] nsys_eager.sqlite[2/8] [====28%                     ] nsys_eager.sqlite[2/8] [=====29%                    ] nsys_eager.sqlite[2/8] [=====30%                    ] nsys_eager.sqlite[2/8] [=====31%                    ] nsys_eager.sqlite[2/8] [=====32%                    ] nsys_eager.sqlite[2/8] [======33%                   ] nsys_eager.sqlite[2/8] [======34%                   ] nsys_eager.sqlite[2/8] [======35%                   ] nsys_eager.sqlite[2/8] [=======36%                  ] nsys_eager.sqlite[2/8] [=======37%                  ] nsys_eager.sqlite[2/8] [=======38%                  ] nsys_eager.sqlite[2/8] [=======39%                  ] nsys_eager.sqlite[2/8] [========40%                 ] nsys_eager.sqlite[2/8] [========41%                 ] nsys_eager.sqlite[2/8] [========42%                 ] nsys_eager.sqlite[2/8] [=========43%                ] nsys_eager.sqlite[2/8] [=========44%                ] nsys_eager.sqlite[2/8] [=========45%                ] nsys_eager.sqlite[2/8] [=========46%                ] nsys_eager.sqlite[2/8] [==========47%               ] nsys_eager.sqlite[2/8] [==========48%               ] nsys_eager.sqlite[2/8] [==========49%               ] nsys_eager.sqlite[2/8] [===========50%              ] nsys_eager.sqlite[2/8] [===========51%              ] nsys_eager.sqlite[2/8] [===========52%              ] nsys_eager.sqlite[2/8] [===========53%              ] nsys_eager.sqlite[2/8] [============54%             ] nsys_eager.sqlite[2/8] [============55%             ] nsys_eager.sqlite[2/8] [============56%             ] nsys_eager.sqlite[2/8] [============57%             ] nsys_eager.sqlite[2/8] [=============58%            ] nsys_eager.sqlite[2/8] [=============59%            ] nsys_eager.sqlite[2/8] [=============60%            ] nsys_eager.sqlite[2/8] [==============61%           ] nsys_eager.sqlite[2/8] [==============62%           ] nsys_eager.sqlite[2/8] [==============63%           ] nsys_eager.sqlite[2/8] [==============64%           ] nsys_eager.sqlite[2/8] [===============65%          ] nsys_eager.sqlite[2/8] [===============66%          ] nsys_eager.sqlite[2/8] [===============67%          ] nsys_eager.sqlite[2/8] [================68%         ] nsys_eager.sqlite[2/8] [================69%         ] nsys_eager.sqlite[2/8] [================70%         ] nsys_eager.sqlite[2/8] [================71%         ] nsys_eager.sqlite[2/8] [=================72%        ] nsys_eager.sqlite[2/8] [=================73%        ] nsys_eager.sqlite[2/8] [=================74%        ] nsys_eager.sqlite[2/8] [==================75%       ] nsys_eager.sqlite[2/8] [==================76%       ] nsys_eager.sqlite[2/8] [==================77%       ] nsys_eager.sqlite[2/8] [==================78%       ] nsys_eager.sqlite[2/8] [===================79%      ] nsys_eager.sqlite[2/8] [===================80%      ] nsys_eager.sqlite[2/8] [===================81%      ] nsys_eager.sqlite[2/8] [===================82%      ] nsys_eager.sqlite[2/8] [====================83%     ] nsys_eager.sqlite[2/8] [====================84%     ] nsys_eager.sqlite[2/8] [====================85%     ] nsys_eager.sqlite[2/8] [=====================86%    ] nsys_eager.sqlite[2/8] [=====================87%    ] nsys_eager.sqlite[2/8] [=====================88%    ] nsys_eager.sqlite[2/8] [=====================89%    ] nsys_eager.sqlite[2/8] [======================90%   ] nsys_eager.sqlite[2/8] [======================91%   ] nsys_eager.sqlite[2/8] [======================92%   ] nsys_eager.sqlite[2/8] [=======================93%  ] nsys_eager.sqlite[2/8] [=======================94%  ] nsys_eager.sqlite[2/8] [=======================95%  ] nsys_eager.sqlite[2/8] [=======================96%  ] nsys_eager.sqlite[2/8] [========================97% ] nsys_eager.sqlite[2/8] [========================98% ] nsys_eager.sqlite[2/8] [========================99% ] nsys_eager.sqlite[2/8] [========================100%] nsys_eager.sqlite[2/8] [========================100%] nsys_eager.sqlite
+[3/8] Executing 'nvtx_sum' stats report
+
+ Time (%)  Total Time (ns)  Instances    Avg (ns)      Med (ns)     Min (ns)    Max (ns)   StdDev (ns)   Style       Range    
+ --------  ---------------  ---------  ------------  ------------  ----------  ----------  -----------  -------  -------------
+     20.3       60,159,673          1  60,159,673.0  60,159,673.0  60,159,673  60,159,673          0.0  PushPop  :eager_iter_1
+     20.2       59,812,656          1  59,812,656.0  59,812,656.0  59,812,656  59,812,656          0.0  PushPop  :eager_iter_2
+     20.0       59,335,410          1  59,335,410.0  59,335,410.0  59,335,410  59,335,410          0.0  PushPop  :eager_iter_3
+     20.0       59,262,941          1  59,262,941.0  59,262,941.0  59,262,941  59,262,941          0.0  PushPop  :eager_iter_4
+     19.5       57,613,804          1  57,613,804.0  57,613,804.0  57,613,804  57,613,804          0.0  PushPop  :eager_iter_0
+
+[4/8] Executing 'osrt_sum' stats report
+
+ Time (%)  Total Time (ns)  Num Calls    Avg (ns)       Med (ns)      Min (ns)     Max (ns)    StdDev (ns)           Name         
+ --------  ---------------  ---------  -------------  -------------  -----------  -----------  -----------  ----------------------
+     62.3      500,035,812          1  500,035,812.0  500,035,812.0  500,035,812  500,035,812          0.0  pthread_cond_timedwait
+     37.4      300,431,209          3  100,143,736.3  100,149,603.0  100,131,753  100,149,853     10,378.6  poll                  
+      0.3        2,095,855         32       65,495.5       61,625.0        7,510      155,439     50,379.1  ioctl                 
+      0.0           44,760          1       44,760.0       44,760.0       44,760       44,760          0.0  pthread_mutex_lock    
+
+[5/8] Executing 'cuda_api_sum' stats report
+
+ Time (%)  Total Time (ns)  Num Calls    Avg (ns)      Med (ns)     Min (ns)    Max (ns)   StdDev (ns)          Name         
+ --------  ---------------  ---------  ------------  ------------  ----------  ----------  -----------  ---------------------
+     76.8      134,617,395          5  26,923,479.0  27,679,026.0  24,083,023  28,141,341  1,644,033.5  cudaDeviceSynchronize
+     21.9       38,399,887      5,975       6,426.8       6,120.0       4,690      53,690      1,403.3  cudaLaunchKernel     
+      0.8        1,344,758          6     224,126.3     180,644.0     163,578     328,557     80,662.4  cuMemSetAccess       
+      0.3          591,556          8      73,944.5      70,059.0      63,110     106,899     13,706.4  cuMemMap             
+      0.2          395,247          8      49,405.9      47,740.0      29,810      76,489     13,737.7  cuMemCreate          
+      0.0           13,499          1      13,499.0      13,499.0      13,499      13,499          0.0  cuProfilerStart      
+
+[6/8] Executing 'cuda_gpu_kern_sum' stats report
+
+ Time (%)  Total Time (ns)  Instances  Avg (ns)   Med (ns)   Min (ns)  Max (ns)   StdDev (ns)                                                  Name                                                
+ --------  ---------------  ---------  ---------  ---------  --------  ---------  -----------  ----------------------------------------------------------------------------------------------------
+     51.3      146,537,521        285  514,166.7  474,654.0   424,254  2,978,640    328,225.5  ampere_bf16_s16816gemm_bf16_256x128_ldg8_f2f_stages_32x3_tn                                         
+     24.0       68,668,672        280  245,245.3  231,951.0    67,039    414,142    162,900.6  ampere_bf16_s16816gemm_bf16_128x128_ldg8_f2f_stages_32x5_tn                                         
+      5.4       15,429,736        140  110,212.4  110,383.5   106,975    114,624      1,176.6  ampere_bf16_s16816gemm_bf16_128x64_ldg8_relu_f2f_stages_32x6_tn                                     
+      3.7       10,487,136        140   74,908.1   76,271.5    61,056     78,560      4,609.4  void flash::flash_fwd_kernel<Flash_fwd_kernel_traits<(int)128, (int)128, (int)32, (int)4, (bool)0, …
+      2.3        6,500,638        140   46,433.1   46,431.0    45,984     47,264        244.0  void at::native::vectorized_elementwise_kernel<(int)4, at::native::BinaryFunctor<c10::BFloat16, c10…
+      2.0        5,842,401        845    6,914.1    7,936.0     2,720     10,304      2,360.1  void at::native::elementwise_kernel<(int)128, (int)4, void at::native::gpu_kernel_impl_nocast<at::n…
+      1.8        5,182,371        280   18,508.5   18,720.0    15,616     19,872        908.8  ampere_bf16_s16816gemm_bf16_128x64_ldg8_f2f_stages_32x6_tn                                          
+      1.5        4,212,166        140   30,086.9   30,080.0    29,088     30,880        308.8  void at::native::vectorized_elementwise_kernel<(int)4, at::native::<unnamed>::silu_kernel(at::Tenso…
+      1.1        3,253,612        285   11,416.2   11,424.0    10,656     11,872        214.1  void at::native::elementwise_kernel<(int)128, (int)2, void at::native::gpu_kernel_impl_nocast<at::n…
+      1.0        2,796,591        285    9,812.6    9,952.0     7,584     10,304        519.2  void at::native::reduce_kernel<(int)512, (int)1, at::native::ReduceOp<float, at::native::MeanOps<fl…
+      0.9        2,614,324        560    4,668.4    5,568.0     1,472      5,984      1,646.4  void at::native::vectorized_elementwise_kernel<(int)4, at::native::CUDAFunctor_add<c10::BFloat16>, …
+      0.9        2,514,615        280    8,980.8    8,112.0     4,064     13,536      4,096.3  void at::native::<unnamed>::CatArrayBatchedCopy<at::native::<unnamed>::OpaqueType<(unsigned int)2>,…
+      0.8        2,290,031        290    7,896.7    8,064.0     2,047      9,856        836.2  void at::native::unrolled_elementwise_kernel<at::native::direct_copy_kernel_cuda(at::TensorIterator…
+      0.7        2,110,806        285    7,406.3    7,424.0     6,528      8,191        292.0  void at::native::vectorized_elementwise_kernel<(int)4, void at::native::<unnamed>::pow_tensor_scala…
+      0.7        2,098,996        280    7,496.4    7,328.0     6,080      8,192        501.6  void at::native::_scatter_gather_elementwise_kernel<(int)128, (int)8, void at::native::_cuda_scatte…
+      0.4        1,197,978        280    4,278.5    4,320.0     3,552      5,056        269.1  void cublasLt::splitKreduce_kernel<(int)32, (int)16, int, __nv_bfloat16, __nv_bfloat16, float, __nv…
+      0.4        1,184,409        295    4,014.9    4,128.0     1,152      4,672        523.1  void at::native::vectorized_elementwise_kernel<(int)4, at::native::bfloat16_copy_kernel_cuda(at::Te…
+      0.4        1,084,695        285    3,805.9    3,840.0     3,072      4,128        174.9  void at::native::elementwise_kernel<(int)128, (int)4, void at::native::gpu_kernel_impl<at::native::…
+      0.4        1,032,313        280    3,686.8    3,488.0     2,272      4,832        976.3  void at::native::elementwise_kernel<(int)128, (int)4, void at::native::gpu_kernel_impl_nocast<at::n…
+      0.2          469,247        285    1,646.5    1,664.0     1,344      1,696         84.5  void at::native::vectorized_elementwise_kernel<(int)4, at::native::rsqrt_kernel_cuda(at::TensorIter…
+      0.0           37,535         10    3,753.5    3,440.0     2,528      4,704        817.3  void at::native::elementwise_kernel<(int)128, (int)4, void at::native::gpu_kernel_impl<at::native::…
+      0.0           34,432          5    6,886.4    6,848.0     6,848      7,008         69.4  void at::native::vectorized_gather_kernel<(int)16, long>(char *, char *, T2 *, int, long, long, lon…
+      0.0           19,744          5    3,948.8    4,096.0     3,296      4,160        366.7  void at::native::<unnamed>::CatArrayBatchedCopy<at::native::<unnamed>::OpaqueType<(unsigned int)4>,…
+      0.0           13,568          5    2,713.6    2,848.0     2,208      2,880        284.8  void at::native::vectorized_elementwise_kernel<(int)4, at::native::cos_kernel_cuda(at::TensorIterat…
+      0.0           13,472          5    2,694.4    2,784.0     2,272      2,816        236.7  void at::native::vectorized_elementwise_kernel<(int)4, at::native::sin_kernel_cuda(at::TensorIteraSKIPPED: /research/data/transfer/data/n41/fast_v2/./tests/nsys_eager.sqlite does not contain GPU memory data.
+SKIPPED: /research/data/transfer/data/n41/fast_v2/./tests/nsys_eager.sqlite does not contain GPU memory data.
+t…
+      0.0            9,728          5    1,945.6    2,016.0     1,632      2,080        178.7  void gemmk1_kernel<int, float, (int)256, (int)5, (bool)0, (bool)0, (bool)0, (bool)0, cublasGemvTens…
+
+[7/8] Executing 'cuda_gpu_mem_time_sum' stats report
+[8/8] Executing 'cuda_gpu_mem_size_sum' stats report
+Generated:
+	/research/data/transfer/data/n41/fast_v2/./tests/nsys_eager.nsys-rep
+	/research/data/transfer/data/n41/fast_v2/./tests/nsys_eager.sqlite

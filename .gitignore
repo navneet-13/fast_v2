@@ -1,0 +1,61 @@
+# ============================================================================
+# Fast-dLLM v2 / FOCUS — .gitignore
+# Heavy and machine-specific artifacts are NOT tracked. The only large-dir
+# exception is our edited model code: models/**/modeling.py (see below).
+# Re-download the weights with: python scripts/download_model.py
+# ============================================================================
+
+# ---- Model assets & HF cache (29 GB) -------------------------------------
+# Ignore everything under models/ EXCEPT our edited modeling.py. Weights,
+# config.json, configuration.py and the tokenizer are re-downloaded by
+# scripts/download_model.py into the same relative snapshot directory.
+/models/**
+!/models/**/
+!/models/**/modeling.py
+
+# ---- Conda env / virtualenvs (6.6 GB) ------------------------------------
+/v2/
+/run_env/
+/venv/
+/.venv/
+env/
+
+# ---- Run scratch / generated output dirs ---------------------------------
+/test_run/
+/run_run/
+/torchinductor_n41/
+/torch_compile_debug/
+/torch_compile_debug*/
+
+# ---- Logs: keep the small .md result summaries, drop everything else -----
+# (logs/ is ~1.6 GB of profiler traces; logs/*.md is 42 KB of results.)
+/logs/**
+!/logs/**/
+!/logs/*.md
+
+# ---- Python caches & build -----------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.mypy_cache/
+*.egg-info/
+build/
+dist/
+
+# ---- Profiler / trace artifacts ------------------------------------------
+*.nsys-rep
+*.sqlite
+*.qdrep
+*.ncu-rep
+*.json.gz
+
+# ---- Editor / OS / AI-tool local state -----------------------------------
+.claude/
+.cursor/
+.kiro/
+.opencode.json
+.mcp.json
+.DS_Store
+*.swp

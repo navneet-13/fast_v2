@@ -1,0 +1,206 @@
+==============================================
+Detected 8 GPU(s): 0 1 2 3 4 5 6 7
+GPU memory busy threshold: 1000 MB
+==============================================
+
+Current GPU Status:
+----------------------------------------------
+  GPU 0: 2MB / 23028MB - AVAILABLE
+  GPU 1: 2MB / 23028MB - AVAILABLE
+  GPU 2: 2MB / 23028MB - AVAILABLE
+  GPU 3: 2MB / 23028MB - AVAILABLE
+  GPU 4: 2MB / 23028MB - AVAILABLE
+  GPU 5: 2MB / 23028MB - AVAILABLE
+  GPU 6: 2MB / 23028MB - AVAILABLE
+  GPU 7: 2MB / 23028MB - AVAILABLE
+----------------------------------------------
+==============================================
+Starting Parallel Configuration Sweep
+Logs will be saved to: logs/sweep_parallel_20260317_044346
+==============================================
+
+Configurations: 30 total, starting from #1
+GPUs available: 8
+
+----------------------------------------------
+[1/30] Baseline bs=1
+  [GPU 0] Starting: Baseline bs=1
+    Log: logs/sweep_parallel_20260317_044346/baseline/bs_1.log
+    PID: 357799
+----------------------------------------------
+[2/30] Dynamo bs=1
+  [GPU 1] Starting: Dynamo bs=1
+    Log: logs/sweep_parallel_20260317_044346/dynamo/bs_1.log
+    PID: 357894
+----------------------------------------------
+[3/30] Sparse ratio=0.25 bs=1
+  [GPU 2] Starting: Sparse ratio=0.25 bs=1
+    Log: logs/sweep_parallel_20260317_044346/sparse_ratio_0.25/bs_1.log
+    PID: 357994
+----------------------------------------------
+[4/30] Sparse ratio=0.50 bs=1
+  [GPU 3] Starting: Sparse ratio=0.50 bs=1
+    Log: logs/sweep_parallel_20260317_044346/sparse_ratio_0.50/bs_1.log
+    PID: 358069
+----------------------------------------------
+[5/30] Sparse ratio=0.75 bs=1
+  [GPU 4] Starting: Sparse ratio=0.75 bs=1
+    Log: logs/sweep_parallel_20260317_044346/sparse_ratio_0.75/bs_1.log
+    PID: 358273
+----------------------------------------------
+[6/30] Baseline bs=2
+  [GPU 5] Starting: Baseline bs=2
+    Log: logs/sweep_parallel_20260317_044346/baseline/bs_2.log
+    PID: 358414
+----------------------------------------------
+[7/30] Dynamo bs=2
+  [GPU 6] Starting: Dynamo bs=2
+    Log: logs/sweep_parallel_20260317_044346/dynamo/bs_2.log
+    PID: 358553
+----------------------------------------------
+[8/30] Sparse ratio=0.25 bs=2
+  [GPU 7] Starting: Sparse ratio=0.25 bs=2
+    Log: logs/sweep_parallel_20260317_044346/sparse_ratio_0.25/bs_2.log
+    PID: 358697
+----------------------------------------------
+[9/30] Sparse ratio=0.50 bs=2
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 6] Starting: Sparse ratio=0.50 bs=2
+    Log: logs/sweep_parallel_20260317_044346/sparse_ratio_0.50/bs_2.log
+    PID: 366908
+----------------------------------------------
+[10/30] Sparse ratio=0.75 bs=2
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 5] Starting: Sparse ratio=0.75 bs=2
+    Log: logs/sweep_parallel_20260317_044346/sparse_ratio_0.75/bs_2.log
+    PID: 367898
+----------------------------------------------
+[11/30] Baseline bs=4
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 1] Starting: Baseline bs=4
+    Log: logs/sweep_parallel_20260317_044346/baseline/bs_4.log
+    PID: 369696
+----------------------------------------------
+[12/30] Dynamo bs=4
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 7] Starting: Dynamo bs=4
+    Log: logs/sweep_parallel_20260317_044346/dynamo/bs_4.log
+    PID: 370057
+----------------------------------------------
+[13/30] Sparse ratio=0.25 bs=4
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 0] Starting: Sparse ratio=0.25 bs=4
+    Log: logs/sweep_parallel_20260317_044346/sparse_ratio_0.25/bs_4.log
+    PID: 370921
+----------------------------------------------
+[14/30] Sparse ratio=0.50 bs=4
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 4] Starting: Sparse ratio=0.50 bs=4
+    Log: logs/sweep_parallel_20260317_044346/sparse_ratio_0.50/bs_4.log
+    PID: 371407
+----------------------------------------------
+[15/30] Sparse ratio=0.75 bs=4
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 3] Starting: Sparse ratio=0.75 bs=4
+    Log: logs/sweep_parallel_20260317_044346/sparse_ratio_0.75/bs_4.log
+    PID: 372133
+----------------------------------------------
+[16/30] Baseline bs=8
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 2] Starting: Baseline bs=8
+    Log: logs/sweep_parallel_20260317_044346/baseline/bs_8.log
+    PID: 376119
+----------------------------------------------
+[17/30] Dynamo bs=8
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 7] Starting: Dynamo bs=8
+    Log: logs/sweep_parallel_20260317_044346/dynamo/bs_8.log
+    PID: 377459
+----------------------------------------------
+[18/30] Sparse ratio=0.25 bs=8
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 1] Starting: Sparse ratio=0.25 bs=8
+    Log: logs/sweep_parallel_20260317_044346/sparse_ratio_0.25/bs_8.log
+    PID: 378033
+----------------------------------------------
+[19/30] Sparse ratio=0.50 bs=8
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 6] Starting: Sparse ratio=0.50 bs=8
+    Log: logs/sweep_parallel_20260317_044346/sparse_ratio_0.50/bs_8.log
+    PID: 378293
+----------------------------------------------
+[20/30] Sparse ratio=0.75 bs=8
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 5] Starting: Sparse ratio=0.75 bs=8
+    Log: logs/sweep_parallel_20260317_044346/sparse_ratio_0.75/bs_8.log
+    PID: 379323
+----------------------------------------------
+[21/30] Baseline bs=16
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 4] Starting: Baseline bs=16
+    Log: logs/sweep_parallel_20260317_044346/baseline/bs_16.log
+    PID: 379673
+----------------------------------------------
+[22/30] Dynamo bs=16
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 3] Starting: Dynamo bs=16
+    Log: logs/sweep_parallel_20260317_044346/dynamo/bs_16.log
+    PID: 380403
+----------------------------------------------
+[23/30] Sparse ratio=0.25 bs=16
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 0] Starting: Sparse ratio=0.25 bs=16
+    Log: logs/sweep_parallel_20260317_044346/sparse_ratio_0.25/bs_16.log
+    PID: 380706
+----------------------------------------------
+[24/30] Sparse ratio=0.50 bs=16
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 2] Starting: Sparse ratio=0.50 bs=16
+    Log: logs/sweep_parallel_20260317_044346/sparse_ratio_0.50/bs_16.log
+    PID: 383241
+----------------------------------------------
+[25/30] Sparse ratio=0.75 bs=16
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 6] Starting: Sparse ratio=0.75 bs=16
+    Log: logs/sweep_parallel_20260317_044346/sparse_ratio_0.75/bs_16.log
+    PID: 384245
+----------------------------------------------
+[26/30] Baseline bs=32
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 1] Starting: Baseline bs=32
+    Log: logs/sweep_parallel_20260317_044346/baseline/bs_32.log
+    PID: 384683
+----------------------------------------------
+[27/30] Dynamo bs=32
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 7] Starting: Dynamo bs=32
+    Log: logs/sweep_parallel_20260317_044346/dynamo/bs_32.log
+    PID: 385122
+----------------------------------------------
+[28/30] Sparse ratio=0.25 bs=32
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 7] Starting: Sparse ratio=0.25 bs=32
+    Log: logs/sweep_parallel_20260317_044346/sparse_ratio_0.25/bs_32.log
+    PID: 385374
+----------------------------------------------
+[29/30] Sparse ratio=0.50 bs=32
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 7] Starting: Sparse ratio=0.50 bs=32
+    Log: logs/sweep_parallel_20260317_044346/sparse_ratio_0.50/bs_32.log
+    PID: 385591
+----------------------------------------------
+[30/30] Sparse ratio=0.75 bs=32
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 7] Starting: Sparse ratio=0.75 bs=32
+    Log: logs/sweep_parallel_20260317_044346/sparse_ratio_0.75/bs_32.log
+    PID: 385831
+
+==============================================
+All configs (1 to 30) scheduled!
+Waiting for remaining jobs to complete...
+==============================================
+
+==============================================
+COMPLETE! All configurations finished.
+Logs: logs/sweep_parallel_20260317_044346/
+==============================================

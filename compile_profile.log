@@ -1,0 +1,229 @@
+torch 2.9.1+cu128  CUDA 12.8  device=NVIDIA RTX A5000
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:01<00:03,  1.14s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:02<00:02,  1.09s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:03<00:00,  1.00it/s]Loading checkpoint shards: 100%|██████████| 4/4 [00:03<00:00,  1.45it/s]Loading checkpoint shards: 100%|██████████| 4/4 [00:03<00:00,  1.21it/s]
+2026-03-18:05:56:21 INFO     [utils.attention_backends] [attention_backend] SKIPPED: flash4  gpu=SM 8.6  reason=SM < 9.0
+2026-03-18:05:56:21 INFO     [utils.attention_backends] [attention_backend] SKIPPED: flash3  gpu=SM 8.6  reason=flash_attn_3 package not installed
+2026-03-18:05:56:21 INFO     [utils.attention_backends] [attention_backend] SELECTED: flash2 (with kvcache)  gpu=SM 8.6  requested='auto'
+2026-03-18:05:56:22 INFO     [utils.attention_backends] [flash_kvcache_attention] DISPATCHING to backend='flash2'  query=(2, 32, 28, 128)  kv_cache=(2, 4096, 4, 128)  cache_seqlens=[64, 64]
+/research/data/transfer/data/n41/fast_v2/v2/lib/python3.11/site-packages/torch/_inductor/compile_fx.py:312: UserWarning: TensorFloat32 tensor cores for float32 matrix multiplication available but not enabled. Consider setting `torch.set_float32_matmul_precision('high')` for better performance.
+  warnings.warn(
+W0318 05:57:18.730000 1587863 v2/lib/python3.11/site-packages/torch/_inductor/utils.py:1613] [0/0_1] Not enough SMs to use max_autotune_gemm mode
+
+=== Profiling EAGER ===
+
+  Trace saved to: logs/profile_eager.json
+
+  Top 20 CUDA kernels (eager):
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                          ProfilerStep*         0.00%       0.000us         0.00%       0.000us       0.000us     249.772ms       172.51%     249.772ms      49.954ms             5  
+                                          ProfilerStep*        27.33%      68.409ms       100.00%     250.324ms      50.065ms       0.000us         0.00%     144.786ms      28.957ms             5  
+                                           aten::linear         2.38%       5.945ms        24.95%      62.459ms      63.411us       0.000us         0.00%     128.508ms     130.465us           985  
+                                           aten::matmul         1.95%       4.886ms        11.31%      28.314ms      49.673us       0.000us         0.00%     118.906ms     208.607us           570  
+                                               aten::mm         5.02%      12.560ms         7.88%      19.734ms      34.927us     118.898ms        82.12%     118.898ms     210.438us           565  
+         ampere_bf16_s16816gemm_bf16_256x64_ldg8_f2f_tn         0.00%       0.000us         0.00%       0.000us       0.000us      74.538ms        51.48%      74.538ms     266.208us           280  
+ampere_bf16_s16816gemm_bf16_128x64_ldg8_f2f_stages_6...         0.00%       0.000us         0.00%       0.000us       0.000us      36.144ms        24.96%      36.144ms     129.086us           280  
+                                            aten::addmm         4.82%      12.076ms         6.96%      17.428ms      41.494us       9.611ms         6.64%       9.611ms      22.883us           420  
+ampere_bf16_s16816gemm_bf16_128x64_ldg8_f2f_stages_3...         0.00%       0.000us         0.00%       0.000us       0.000us       8.021ms         5.54%       8.021ms       1.604ms             5  
+ampere_bf16_s16816gemm_bf16_64x64_sliced1x2_ldg8_rel...         0.00%       0.000us         0.00%       0.000us       0.000us       6.405ms         4.42%       6.405ms      45.752us           140  
+                                              aten::mul         5.39%      13.485ms         8.76%      21.937ms      17.139us       4.739ms         3.27%       4.739ms       3.702us          1280  
+void at::native::elementwise_kernel<128, 4, at::nati...         0.00%       0.000us         0.00%       0.000us       0.000us       2.727ms         1.88%       2.727ms       3.227us           845  
+void cutlass::Kernel2<cutlass_80_tensorop_bf16_s1681...         0.00%       0.000us         0.00%       0.000us       0.000us       2.590ms         1.79%       2.590ms       9.249us           280  
+                                             aten::mean         1.53%       3.831ms         2.26%       5.669ms      19.892us       2.181ms         1.51%       2.181ms       7.653us           285  
+void at::native::reduce_kernel<512, 1, at::native::R...         0.00%       0.000us         0.00%       0.000us       0.000us       2.181ms         1.51%       2.181ms       7.653us           285  
+                           fast_dllm_fa2::flash_kvcache         2.19%       5.473ms         4.59%      11.496ms      82.117us       1.959ms         1.35%       1.959ms      13.994us           140  
+                                            aten::copy_         1.70%       4.266ms         3.51%       8.793ms      14.903us       1.508ms         1.04%       1.508ms       2.556us           590  
+                                               aten::to         0.73%       1.834ms         7.03%      17.600ms      19.775us       0.000us         0.00%       1.502ms       1.688us           890  
+                                         aten::_to_copy         1.42%       3.553ms         6.30%      15.765ms      26.949us       0.000us         0.00%       1.502ms       2.568us           585  
+                                              aten::add         3.45%       8.632ms         5.63%      14.103ms      16.591us       1.438ms         0.99%       1.438ms       1.692us           850  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+Self CPU time total: 250.327ms
+Self CUDA time total: 144.786ms
+
+
+  Kernel type summary (eager):
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                          ProfilerStep*         0.00%       0.000us         0.00%       0.000us       0.000us     249.772ms       172.51%     249.772ms      49.954ms             5  
+                                          ProfilerStep*        27.33%      68.409ms       100.00%     250.324ms      50.065ms       0.000us         0.00%     144.786ms      28.957ms             5  
+                                           aten::linear         2.38%       5.945ms        24.95%      62.459ms      63.411us       0.000us         0.00%     128.508ms     130.465us           985  
+                                           aten::matmul         1.95%       4.886ms        11.31%      28.314ms      49.673us       0.000us         0.00%     118.906ms     208.607us           570  
+                                               aten::mm         5.02%      12.560ms         7.88%      19.734ms      34.927us     118.898ms        82.12%     118.898ms     210.438us           565  
+         ampere_bf16_s16816gemm_bf16_256x64_ldg8_f2f_tn         0.00%       0.000us         0.00%       0.000us       0.000us      74.538ms        51.48%      74.538ms     266.208us           280  
+ampere_bf16_s16816gemm_bf16_128x64_ldg8_f2f_stages_6...         0.00%       0.000us         0.00%       0.000us       0.000us      36.144ms        24.96%      36.144ms     129.086us           280  
+                                            aten::addmm         4.82%      12.076ms         6.96%      17.428ms      41.494us       9.611ms         6.64%       9.611ms      22.883us           420  
+ampere_bf16_s16816gemm_bf16_128x64_ldg8_f2f_stages_3...         0.00%       0.000us         0.00%       0.000us       0.000us       8.021ms         5.54%       8.021ms       1.604ms             5  
+ampere_bf16_s16816gemm_bf16_64x64_sliced1x2_ldg8_rel...         0.00%       0.000us         0.00%       0.000us       0.000us       6.405ms         4.42%       6.405ms      45.752us           140  
+                                              aten::mul         5.39%      13.485ms         8.76%      21.937ms      17.139us       4.739ms         3.27%       4.739ms       3.702us          1280  
+void at::native::elementwise_kernel<128, 4, at::nati...         0.00%       0.000us         0.00%       0.000us       0.000us       2.727ms         1.88%       2.727ms       3.227us           845  
+void cutlass::Kernel2<cutlass_80_tensorop_bf16_s1681...         0.00%       0.000us         0.00%       0.000us       0.000us       2.590ms         1.79%       2.590ms       9.249us           280  
+                                             aten::mean         1.53%       3.831ms         2.26%       5.669ms      19.892us       2.181ms         1.51%       2.181ms       7.653us           285  
+void at::native::reduce_kernel<512, 1, at::native::R...         0.00%       0.000us         0.00%       0.000us       0.000us       2.181ms         1.51%       2.181ms       7.653us           285  
+                           fast_dllm_fa2::flash_kvcache         2.19%       5.473ms         4.59%      11.496ms      82.117us       1.959ms         1.35%       1.959ms      13.994us           140  
+                                            aten::copy_         1.70%       4.266ms         3.51%       8.793ms      14.903us       1.508ms         1.04%       1.508ms       2.556us           590  
+                                               aten::to         0.73%       1.834ms         7.03%      17.600ms      19.775us       0.000us         0.00%       1.502ms       1.688us           890  
+                                         aten::_to_copy         1.42%       3.553ms         6.30%      15.765ms      26.949us       0.000us         0.00%       1.502ms       2.568us           585  
+                                              aten::add         3.45%       8.632ms         5.63%      14.103ms      16.591us       1.438ms         0.99%       1.438ms       1.692us           850  
+                                              aten::cat         1.39%       3.475ms         2.13%       5.328ms      18.695us       1.275ms         0.88%       1.275ms       4.472us           285  
+void flash::flash_fwd_splitkv_kernel<Flash_fwd_kerne...         0.00%       0.000us         0.00%       0.000us       0.000us       1.261ms         0.87%       1.261ms       9.008us           140  
+void at::native::(anonymous namespace)::CatArrayBatc...         0.00%       0.000us         0.00%       0.000us       0.000us       1.257ms         0.87%       1.257ms       4.490us           280  
+void at::native::vectorized_elementwise_kernel<4, at...         0.00%       0.000us         0.00%       0.000us       0.000us       1.174ms         0.81%       1.174ms       8.385us           140  
+void at::native::vectorized_elementwise_kernel<4, at...         0.00%       0.000us         0.00%       0.000us       0.000us       1.096ms         0.76%       1.096ms       1.957us           560  
+void at::native::unrolled_elementwise_kernel<at::nat...         0.00%       0.000us         0.00%       0.000us       0.000us     981.731us         0.68%     981.731us       3.385us           290  
+void at::native::elementwise_kernel<128, 2, at::nati...         0.00%       0.000us         0.00%       0.000us       0.000us     825.126us         0.57%     825.126us       2.895us           285  
+                                      aten::index_copy_         1.44%       3.601ms         2.50%       6.264ms      22.370us     781.886us         0.54%     781.886us       2.792us           280  
+void at::native::index_elementwise_kernel<128, 4, at...         0.00%       0.000us         0.00%       0.000us       0.000us     781.886us         0.54%     781.886us       2.792us           280  
+                                             aten::silu         0.64%       1.608ms         1.07%       2.689ms      19.205us     763.138us         0.53%     763.138us       5.451us           140  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+Self CPU time total: 250.327ms
+Self CUDA time total: 144.786ms
+
+
+=== Compiling (mode=default) ===
+=== Profiling COMPILED (default) ===
+
+  Trace saved to: logs/profile_compiled_default.json
+
+  Top 20 CUDA kernels (compiled_default):
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+## Call CompiledFxGraph fchn5lkusky4srd4gfspjxzxsbie...         0.00%       0.000us         0.00%       0.000us       0.000us     295.546ms       101.69%     295.546ms      59.109ms             5  
+                                          ProfilerStep*         0.42%       1.310ms       100.00%     310.478ms      62.096ms       0.000us         0.00%     290.630ms      58.126ms             5  
+                             Torch-Compiled Region: 0/0         0.22%     695.050us        36.83%     114.358ms      22.872ms       0.000us         0.00%     290.589ms      58.118ms             5  
+## Call CompiledFxGraph fchn5lkusky4srd4gfspjxzxsbie...        14.40%      44.696ms        35.52%     110.284ms      22.057ms       0.000us         0.00%     290.589ms      58.118ms             5  
+                                               aten::mm         3.10%       9.621ms         4.98%      15.463ms      27.128us     118.575ms        40.80%     118.575ms     208.027us           570  
+         ampere_bf16_s16816gemm_bf16_256x64_ldg8_f2f_tn         0.00%       0.000us         0.00%       0.000us       0.000us      73.905ms        25.43%      73.905ms     263.945us           280  
+ampere_bf16_s16816gemm_bf16_128x64_ldg8_f2f_stages_6...         0.00%       0.000us         0.00%       0.000us       0.000us      36.400ms        12.52%      36.400ms     130.001us           280  
+                              triton_poi_fused_copy__46         0.05%     144.320us         0.07%     206.740us      20.674us      24.027ms         8.27%      24.027ms       2.403ms            10  
+                              triton_poi_fused_copy__46         0.00%       0.000us         0.00%       0.000us       0.000us      24.027ms         8.27%      24.027ms       2.403ms            10  
+                                    triton_poi_fused_31         0.04%     133.600us         0.07%     202.900us      20.290us      20.076ms         6.91%      20.076ms       2.008ms            10  
+                                    triton_poi_fused_31         0.00%       0.000us         0.00%       0.000us       0.000us      20.076ms         6.91%      20.076ms       2.008ms            10  
+                                    triton_poi_fused_26         0.04%     133.060us         0.06%     193.720us      19.372us      20.075ms         6.91%      20.075ms       2.008ms            10  
+                                    triton_poi_fused_26         0.00%       0.000us         0.00%       0.000us       0.000us      20.075ms         6.91%      20.075ms       2.008ms            10  
+                                    triton_poi_fused_21         0.05%     149.751us         0.07%     213.711us      21.371us      20.074ms         6.91%      20.074ms       2.007ms            10  
+                                    triton_poi_fused_21         0.00%       0.000us         0.00%       0.000us       0.000us      20.074ms         6.91%      20.074ms       2.007ms            10  
+                                    triton_poi_fused_15         0.05%     146.770us         0.07%     211.870us      21.187us      20.072ms         6.91%      20.072ms       2.007ms            10  
+                                    triton_poi_fused_15         0.00%       0.000us         0.00%       0.000us       0.000us      20.072ms         6.91%      20.072ms       2.007ms            10  
+                                    triton_poi_fused_36         0.04%     132.040us         0.06%     192.390us      19.239us      20.070ms         6.91%      20.070ms       2.007ms            10  
+                                    triton_poi_fused_36         0.00%       0.000us         0.00%       0.000us       0.000us      20.070ms         6.91%      20.070ms       2.007ms            10  
+                                    triton_poi_fused_41         0.05%     140.900us         0.07%     203.100us      20.310us      20.070ms         6.91%      20.070ms       2.007ms            10  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+Self CPU time total: 310.481ms
+Self CUDA time total: 290.630ms
+
+
+  Kernel type summary (compiled_default):
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+## Call CompiledFxGraph fchn5lkusky4srd4gfspjxzxsbie...         0.00%       0.000us         0.00%       0.000us       0.000us     295.546ms       101.69%     295.546ms      59.109ms             5  
+                                          ProfilerStep*         0.42%       1.310ms       100.00%     310.478ms      62.096ms       0.000us         0.00%     290.630ms      58.126ms             5  
+                             Torch-Compiled Region: 0/0         0.22%     695.050us        36.83%     114.358ms      22.872ms       0.000us         0.00%     290.589ms      58.118ms             5  
+## Call CompiledFxGraph fchn5lkusky4srd4gfspjxzxsbie...        14.40%      44.696ms        35.52%     110.284ms      22.057ms       0.000us         0.00%     290.589ms      58.118ms             5  
+                                               aten::mm         3.10%       9.621ms         4.98%      15.463ms      27.128us     118.575ms        40.80%     118.575ms     208.027us           570  
+         ampere_bf16_s16816gemm_bf16_256x64_ldg8_f2f_tn         0.00%       0.000us         0.00%       0.000us       0.000us      73.905ms        25.43%      73.905ms     263.945us           280  
+ampere_bf16_s16816gemm_bf16_128x64_ldg8_f2f_stages_6...         0.00%       0.000us         0.00%       0.000us       0.000us      36.400ms        12.52%      36.400ms     130.001us           280  
+                              triton_poi_fused_copy__46         0.05%     144.320us         0.07%     206.740us      20.674us      24.027ms         8.27%      24.027ms       2.403ms            10  
+                              triton_poi_fused_copy__46         0.00%       0.000us         0.00%       0.000us       0.000us      24.027ms         8.27%      24.027ms       2.403ms            10  
+                                    triton_poi_fused_31         0.04%     133.600us         0.07%     202.900us      20.290us      20.076ms         6.91%      20.076ms       2.008ms            10  
+                                    triton_poi_fused_31         0.00%       0.000us         0.00%       0.000us       0.000us      20.076ms         6.91%      20.076ms       2.008ms            10  
+                                    triton_poi_fused_26         0.04%     133.060us         0.06%     193.720us      19.372us      20.075ms         6.91%      20.075ms       2.008ms            10  
+                                    triton_poi_fused_26         0.00%       0.000us         0.00%       0.000us       0.000us      20.075ms         6.91%      20.075ms       2.008ms            10  
+                                    triton_poi_fused_21         0.05%     149.751us         0.07%     213.711us      21.371us      20.074ms         6.91%      20.074ms       2.007ms            10  
+                                    triton_poi_fused_21         0.00%       0.000us         0.00%       0.000us       0.000us      20.074ms         6.91%      20.074ms       2.007ms            10  
+                                    triton_poi_fused_15         0.05%     146.770us         0.07%     211.870us      21.187us      20.072ms         6.91%      20.072ms       2.007ms            10  
+                                    triton_poi_fused_15         0.00%       0.000us         0.00%       0.000us       0.000us      20.072ms         6.91%      20.072ms       2.007ms            10  
+                                    triton_poi_fused_36         0.04%     132.040us         0.06%     192.390us      19.239us      20.070ms         6.91%      20.070ms       2.007ms            10  
+                                    triton_poi_fused_36         0.00%       0.000us         0.00%       0.000us       0.000us      20.070ms         6.91%      20.070ms       2.007ms            10  
+                                    triton_poi_fused_41         0.05%     140.900us         0.07%     203.100us      20.310us      20.070ms         6.91%      20.070ms       2.007ms            10  
+                                    triton_poi_fused_41         0.00%       0.000us         0.00%       0.000us       0.000us      20.070ms         6.91%      20.070ms       2.007ms            10  
+                                            aten::addmm         3.02%       9.374ms         4.43%      13.752ms      32.742us       9.409ms         3.24%       9.409ms      22.403us           420  
+ampere_bf16_s16816gemm_bf16_128x64_ldg8_f2f_stages_3...         0.00%       0.000us         0.00%       0.000us       0.000us       8.002ms         2.75%       8.002ms       1.600ms             5  
+ampere_bf16_s16816gemm_bf16_64x64_sliced1x2_ldg8_rel...         0.00%       0.000us         0.00%       0.000us       0.000us       6.034ms         2.08%       6.034ms      43.102us           140  
+void cutlass::Kernel2<cutlass_80_tensorop_bf16_s1681...         0.00%       0.000us         0.00%       0.000us       0.000us       2.721ms         0.94%       2.721ms       9.718us           280  
+                           fast_dllm_fa2::flash_kvcache         1.74%       5.395ms         3.66%      11.352ms      81.088us       2.120ms         0.73%       2.120ms      15.143us           140  
+void flash::flash_fwd_splitkv_kernel<Flash_fwd_kerne...         0.00%       0.000us         0.00%       0.000us       0.000us       1.382ms         0.48%       1.382ms       9.871us           140  
+               triton_poi_fused__unsafe_view_mul_silu_7         0.62%       1.925ms         0.92%       2.847ms      20.333us       1.190ms         0.41%       1.190ms       8.499us           140  
+               triton_poi_fused__unsafe_view_mul_silu_7         0.00%       0.000us         0.00%       0.000us       0.000us       1.190ms         0.41%       1.190ms       8.499us           140  
+                                          ProfilerStep*         0.00%       0.000us         0.00%       0.000us       0.000us       1.083ms         0.37%       1.083ms     216.616us             5  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+Self CPU time total: 310.481ms
+Self CUDA time total: 290.630ms
+
+
+=== Compiling (mode=reduce-overhead) ===
+=== Profiling COMPILED (reduce-overhead) ===
+
+  Trace saved to: logs/profile_compiled_reduce_overhead.json
+
+  Top 20 CUDA kernels (compiled_reduce_overhead):
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+## Call CompiledFxGraph frvpyx32h5jwmixwl3vo5opviwow...         0.00%       0.000us         0.00%       0.000us       0.000us     292.314ms       100.95%     292.314ms      58.463ms             5  
+                                          ProfilerStep*         0.40%       1.228ms       100.00%     304.814ms      60.963ms       0.000us         0.00%     289.550ms      57.910ms             5  
+                             Torch-Compiled Region: 0/0         0.20%     610.310us         3.69%      11.235ms       2.247ms     289.497ms        99.98%     289.509ms      57.902ms             5  
+         ampere_bf16_s16816gemm_bf16_256x64_ldg8_f2f_tn         0.00%       0.000us         0.00%       0.000us       0.000us      73.591ms        25.42%      73.591ms     262.824us           280  
+ampere_bf16_s16816gemm_bf16_128x64_ldg8_f2f_stages_6...         0.00%       0.000us         0.00%       0.000us       0.000us      36.303ms        12.54%      36.303ms     129.654us           280  
+                              triton_poi_fused_copy__94         0.00%       0.000us         0.00%       0.000us       0.000us      24.093ms         8.32%      24.093ms       2.409ms            10  
+                                    triton_poi_fused_29         0.00%       0.000us         0.00%       0.000us       0.000us      20.076ms         6.93%      20.076ms       2.008ms            10  
+                                    triton_poi_fused_81         0.00%       0.000us         0.00%       0.000us       0.000us      20.076ms         6.93%      20.076ms       2.008ms            10  
+                                    triton_poi_fused_68         0.00%       0.000us         0.00%       0.000us       0.000us      20.074ms         6.93%      20.074ms       2.007ms            10  
+                                    triton_poi_fused_16         0.00%       0.000us         0.00%       0.000us       0.000us      20.073ms         6.93%      20.073ms       2.007ms            10  
+                                    triton_poi_fused_55         0.00%       0.000us         0.00%       0.000us       0.000us      20.068ms         6.93%      20.068ms       2.007ms            10  
+                                    triton_poi_fused_42         0.00%       0.000us         0.00%       0.000us       0.000us      20.066ms         6.93%      20.066ms       2.007ms            10  
+ampere_bf16_s16816gemm_bf16_128x64_ldg8_f2f_stages_3...         0.00%       0.000us         0.00%       0.000us       0.000us       8.010ms         2.77%       8.010ms       1.602ms             5  
+ampere_bf16_s16816gemm_bf16_64x64_sliced1x2_ldg8_rel...         0.00%       0.000us         0.00%       0.000us       0.000us       5.976ms         2.06%       5.976ms      42.686us           140  
+void cutlass::Kernel2<cutlass_80_tensorop_bf16_s1681...         0.00%       0.000us         0.00%       0.000us       0.000us       2.585ms         0.89%       2.585ms       9.233us           280  
+void flash::flash_fwd_splitkv_kernel<Flash_fwd_kerne...         0.00%       0.000us         0.00%       0.000us       0.000us       1.248ms         0.43%       1.248ms       8.912us           140  
+               triton_poi_fused__unsafe_view_mul_silu_8         0.00%       0.000us         0.00%       0.000us       0.000us       1.113ms         0.38%       1.113ms       7.948us           140  
+                                          ProfilerStep*         0.00%       0.000us         0.00%       0.000us       0.000us       1.047ms         0.36%       1.047ms     209.332us             5  
+void flash::flash_fwd_splitkv_combine_kernel<Flash_f...         0.00%       0.000us         0.00%       0.000us       0.000us     684.289us         0.24%     684.289us       4.888us           140  
+void cublasLt::splitKreduce_kernel<32, 16, int, __nv...         0.00%       0.000us         0.00%       0.000us       0.000us     622.693us         0.22%     622.693us       2.224us           280  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+Self CPU time total: 304.819ms
+Self CUDA time total: 289.550ms
+
+
+  Kernel type summary (compiled_reduce_overhead):
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+## Call CompiledFxGraph frvpyx32h5jwmixwl3vo5opviwow...         0.00%       0.000us         0.00%       0.000us       0.000us     292.314ms       100.95%     292.314ms      58.463ms             5  
+                                          ProfilerStep*         0.40%       1.228ms       100.00%     304.814ms      60.963ms       0.000us         0.00%     289.550ms      57.910ms             5  
+                             Torch-Compiled Region: 0/0         0.20%     610.310us         3.69%      11.235ms       2.247ms     289.497ms        99.98%     289.509ms      57.902ms             5  
+         ampere_bf16_s16816gemm_bf16_256x64_ldg8_f2f_tn         0.00%       0.000us         0.00%       0.000us       0.000us      73.591ms        25.42%      73.591ms     262.824us           280  
+ampere_bf16_s16816gemm_bf16_128x64_ldg8_f2f_stages_6...         0.00%       0.000us         0.00%       0.000us       0.000us      36.303ms        12.54%      36.303ms     129.654us           280  
+                              triton_poi_fused_copy__94         0.00%       0.000us         0.00%       0.000us       0.000us      24.093ms         8.32%      24.093ms       2.409ms            10  
+                                    triton_poi_fused_29         0.00%       0.000us         0.00%       0.000us       0.000us      20.076ms         6.93%      20.076ms       2.008ms            10  
+                                    triton_poi_fused_81         0.00%       0.000us         0.00%       0.000us       0.000us      20.076ms         6.93%      20.076ms       2.008ms            10  
+                                    triton_poi_fused_68         0.00%       0.000us         0.00%       0.000us       0.000us      20.074ms         6.93%      20.074ms       2.007ms            10  
+                                    triton_poi_fused_16         0.00%       0.000us         0.00%       0.000us       0.000us      20.073ms         6.93%      20.073ms       2.007ms            10  
+                                    triton_poi_fused_55         0.00%       0.000us         0.00%       0.000us       0.000us      20.068ms         6.93%      20.068ms       2.007ms            10  
+                                    triton_poi_fused_42         0.00%       0.000us         0.00%       0.000us       0.000us      20.066ms         6.93%      20.066ms       2.007ms            10  
+ampere_bf16_s16816gemm_bf16_128x64_ldg8_f2f_stages_3...         0.00%       0.000us         0.00%       0.000us       0.000us       8.010ms         2.77%       8.010ms       1.602ms             5  
+ampere_bf16_s16816gemm_bf16_64x64_sliced1x2_ldg8_rel...         0.00%       0.000us         0.00%       0.000us       0.000us       5.976ms         2.06%       5.976ms      42.686us           140  
+void cutlass::Kernel2<cutlass_80_tensorop_bf16_s1681...         0.00%       0.000us         0.00%       0.000us       0.000us       2.585ms         0.89%       2.585ms       9.233us           280  
+void flash::flash_fwd_splitkv_kernel<Flash_fwd_kerne...         0.00%       0.000us         0.00%       0.000us       0.000us       1.248ms         0.43%       1.248ms       8.912us           140  
+               triton_poi_fused__unsafe_view_mul_silu_8         0.00%       0.000us         0.00%       0.000us       0.000us       1.113ms         0.38%       1.113ms       7.948us           140  
+                                          ProfilerStep*         0.00%       0.000us         0.00%       0.000us       0.000us       1.047ms         0.36%       1.047ms     209.332us             5  
+void flash::flash_fwd_splitkv_combine_kernel<Flash_f...         0.00%       0.000us         0.00%       0.000us       0.000us     684.289us         0.24%     684.289us       4.888us           140  
+void cublasLt::splitKreduce_kernel<32, 16, int, __nv...         0.00%       0.000us         0.00%       0.000us       0.000us     622.693us         0.22%     622.693us       2.224us           280  
+triton_poi_fused__to_copy_add_bmm_cat_cos_flash_kvca...         0.00%       0.000us         0.00%       0.000us       0.000us     599.594us         0.21%     599.594us       4.283us           140  
+triton_poi_fused__to_copy_add_bmm_cat_cos_flash_kvca...         0.00%       0.000us         0.00%       0.000us       0.000us     518.052us         0.18%     518.052us      51.805us            10  
+triton_poi_fused__to_copy_add_bmm_cat_cos_flash_kvca...         0.00%       0.000us         0.00%       0.000us       0.000us     515.397us         0.18%     515.397us      51.540us            10  
+triton_poi_fused__to_copy_add_bmm_cat_cos_flash_kvca...         0.00%       0.000us         0.00%       0.000us       0.000us     514.817us         0.18%     514.817us      51.482us            10  
+triton_poi_fused__to_copy_add_bmm_cat_cos_flash_kvca...         0.00%       0.000us         0.00%       0.000us       0.000us     514.465us         0.18%     514.465us      51.446us            10  
+triton_poi_fused__to_copy_add_bmm_cat_cos_flash_kvca...         0.00%       0.000us         0.00%       0.000us       0.000us     513.381us         0.18%     513.381us      51.338us            10  
+triton_poi_fused__to_copy_add_bmm_cat_cos_flash_kvca...         0.00%       0.000us         0.00%       0.000us       0.000us     512.288us         0.18%     512.288us      51.229us            10  
+triton_poi_fused__to_copy_add_bmm_cat_cos_flash_kvca...         0.00%       0.000us         0.00%       0.000us       0.000us     509.313us         0.18%     509.313us      50.931us            10  
+triton_poi_fused__to_copy_add_bmm_cat_cos_flash_kvca...         0.00%       0.000us         0.00%       0.000us       0.000us     502.178us         0.17%     502.178us      50.218us            10  
+triton_poi_fused__to_copy_add_bmm_cat_cos_flash_kvca...         0.00%       0.000us         0.00%       0.000us       0.000us     501.634us         0.17%     501.634us      50.163us            10  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+Self CPU time total: 304.819ms
+Self CUDA time total: 289.550ms
+
+
+Done! Compare traces at ui.perfetto.dev

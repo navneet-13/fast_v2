@@ -1,0 +1,170 @@
+==============================================
+Detected 8 GPU(s): 0 1 2 3 4 5 6 7
+GPU memory busy threshold: 1000 MB
+==============================================
+
+Current GPU Status (memory + compute processes):
+----------------------------------------------
+  GPU 0: 2MB / 23028MB - AVAILABLE
+  GPU 1: 2MB / 23028MB - AVAILABLE
+  GPU 2: 2MB / 23028MB - AVAILABLE
+  GPU 3: 2MB / 23028MB - AVAILABLE
+  GPU 4: 2MB / 23028MB - AVAILABLE
+  GPU 5: 2MB / 23028MB - AVAILABLE
+  GPU 6: 2MB / 23028MB - AVAILABLE
+  GPU 7: 2MB / 23028MB - AVAILABLE
+----------------------------------------------
+==============================================
+Starting Parallel Configuration Sweep
+Logs will be saved to: logs/sweep_parallel_20260407_023610
+==============================================
+
+Configurations: 24 total, starting from #1
+GPUs available: 8
+
+----------------------------------------------
+[1/24] Baseline bc=on bs=1
+  [GPU 0] Starting: Baseline bc=on bs=1
+    Log: logs/sweep_parallel_20260407_023610/baseline_bc_on_refresh_1000000/bs_1.log
+    PID: 3635749
+----------------------------------------------
+[2/24] Sparse ratio=0.25 refresh=2 bs=1
+  [GPU 1] Starting: Sparse ratio=0.25 refresh=2 bs=1
+    Log: logs/sweep_parallel_20260407_023610/sparse_ratio_0.25_bc_off_refresh_2/bs_1.log
+    PID: 3635839
+----------------------------------------------
+[3/24] Sparse ratio=0.25 refresh=4 bs=1
+  [GPU 2] Starting: Sparse ratio=0.25 refresh=4 bs=1
+    Log: logs/sweep_parallel_20260407_023610/sparse_ratio_0.25_bc_off_refresh_4/bs_1.log
+    PID: 3635931
+----------------------------------------------
+[4/24] Sparse ratio=0.25 refresh=6 bs=1
+  [GPU 3] Starting: Sparse ratio=0.25 refresh=6 bs=1
+    Log: logs/sweep_parallel_20260407_023610/sparse_ratio_0.25_bc_off_refresh_6/bs_1.log
+    PID: 3636083
+----------------------------------------------
+[5/24] Sparse ratio=0.25 refresh=10 bs=1
+  [GPU 4] Starting: Sparse ratio=0.25 refresh=10 bs=1
+    Log: logs/sweep_parallel_20260407_023610/sparse_ratio_0.25_bc_off_refresh_10/bs_1.log
+    PID: 3636250
+----------------------------------------------
+[6/24] Sparse ratio=0.25 refresh=20 bs=1
+  [GPU 5] Starting: Sparse ratio=0.25 refresh=20 bs=1
+    Log: logs/sweep_parallel_20260407_023610/sparse_ratio_0.25_bc_off_refresh_20/bs_1.log
+    PID: 3636400
+----------------------------------------------
+[7/24] Sparse ratio=0.25 refresh=30 bs=1
+  [GPU 6] Starting: Sparse ratio=0.25 refresh=30 bs=1
+    Log: logs/sweep_parallel_20260407_023610/sparse_ratio_0.25_bc_off_refresh_30/bs_1.log
+    PID: 3636478
+----------------------------------------------
+[8/24] Sparse ratio=0.25 refresh=50 bs=1
+  [GPU 7] Starting: Sparse ratio=0.25 refresh=50 bs=1
+    Log: logs/sweep_parallel_20260407_023610/sparse_ratio_0.25_bc_off_refresh_50/bs_1.log
+    PID: 3636620
+----------------------------------------------
+[9/24] Baseline bc=on bs=2
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 0] Starting: Baseline bc=on bs=2
+    Log: logs/sweep_parallel_20260407_023610/baseline_bc_on_refresh_1000000/bs_2.log
+    PID: 3660375
+----------------------------------------------
+[10/24] Sparse ratio=0.25 refresh=2 bs=2
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 1] Starting: Sparse ratio=0.25 refresh=2 bs=2
+    Log: logs/sweep_parallel_20260407_023610/sparse_ratio_0.25_bc_off_refresh_2/bs_2.log
+    PID: 3661101
+----------------------------------------------
+[11/24] Sparse ratio=0.25 refresh=4 bs=2
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 2] Starting: Sparse ratio=0.25 refresh=4 bs=2
+    Log: logs/sweep_parallel_20260407_023610/sparse_ratio_0.25_bc_off_refresh_4/bs_2.log
+    PID: 3662920
+----------------------------------------------
+[12/24] Sparse ratio=0.25 refresh=6 bs=2
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 3] Starting: Sparse ratio=0.25 refresh=6 bs=2
+    Log: logs/sweep_parallel_20260407_023610/sparse_ratio_0.25_bc_off_refresh_6/bs_2.log
+    PID: 3665227
+----------------------------------------------
+[13/24] Sparse ratio=0.25 refresh=10 bs=2
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 4] Starting: Sparse ratio=0.25 refresh=10 bs=2
+    Log: logs/sweep_parallel_20260407_023610/sparse_ratio_0.25_bc_off_refresh_10/bs_2.log
+    PID: 3666424
+----------------------------------------------
+[14/24] Sparse ratio=0.25 refresh=20 bs=2
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 6] Starting: Sparse ratio=0.25 refresh=20 bs=2
+    Log: logs/sweep_parallel_20260407_023610/sparse_ratio_0.25_bc_off_refresh_20/bs_2.log
+    PID: 3667362
+----------------------------------------------
+[15/24] Sparse ratio=0.25 refresh=30 bs=2
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 7] Starting: Sparse ratio=0.25 refresh=30 bs=2
+    Log: logs/sweep_parallel_20260407_023610/sparse_ratio_0.25_bc_off_refresh_30/bs_2.log
+    PID: 3667694
+----------------------------------------------
+[16/24] Sparse ratio=0.25 refresh=50 bs=2
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 5] Starting: Sparse ratio=0.25 refresh=50 bs=2
+    Log: logs/sweep_parallel_20260407_023610/sparse_ratio_0.25_bc_off_refresh_50/bs_2.log
+    PID: 3667974
+----------------------------------------------
+[17/24] Baseline bc=on bs=4
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 0] Starting: Baseline bc=on bs=4
+    Log: logs/sweep_parallel_20260407_023610/baseline_bc_on_refresh_1000000/bs_4.log
+    PID: 3671252
+----------------------------------------------
+[18/24] Sparse ratio=0.25 refresh=2 bs=4
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 1] Starting: Sparse ratio=0.25 refresh=2 bs=4
+    Log: logs/sweep_parallel_20260407_023610/sparse_ratio_0.25_bc_off_refresh_2/bs_4.log
+    PID: 3672223
+----------------------------------------------
+[19/24] Sparse ratio=0.25 refresh=4 bs=4
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 2] Starting: Sparse ratio=0.25 refresh=4 bs=4
+    Log: logs/sweep_parallel_20260407_023610/sparse_ratio_0.25_bc_off_refresh_4/bs_4.log
+    PID: 3674133
+----------------------------------------------
+[20/24] Sparse ratio=0.25 refresh=6 bs=4
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 3] Starting: Sparse ratio=0.25 refresh=6 bs=4
+    Log: logs/sweep_parallel_20260407_023610/sparse_ratio_0.25_bc_off_refresh_6/bs_4.log
+    PID: 3675636
+----------------------------------------------
+[21/24] Sparse ratio=0.25 refresh=10 bs=4
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 4] Starting: Sparse ratio=0.25 refresh=10 bs=4
+    Log: logs/sweep_parallel_20260407_023610/sparse_ratio_0.25_bc_off_refresh_10/bs_4.log
+    PID: 3676844
+----------------------------------------------
+[22/24] Sparse ratio=0.25 refresh=20 bs=4
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 0] Starting: Sparse ratio=0.25 refresh=20 bs=4
+    Log: logs/sweep_parallel_20260407_023610/sparse_ratio_0.25_bc_off_refresh_20/bs_4.log
+    PID: 3677523
+----------------------------------------------
+[23/24] Sparse ratio=0.25 refresh=30 bs=4
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 6] Starting: Sparse ratio=0.25 refresh=30 bs=4
+    Log: logs/sweep_parallel_20260407_023610/sparse_ratio_0.25_bc_off_refresh_30/bs_4.log
+    PID: 3678339
+----------------------------------------------
+[24/24] Sparse ratio=0.25 refresh=50 bs=4
+  All GPUs busy (ours or other users). Waiting...
+  [GPU 7] Starting: Sparse ratio=0.25 refresh=50 bs=4
+    Log: logs/sweep_parallel_20260407_023610/sparse_ratio_0.25_bc_off_refresh_50/bs_4.log
+    PID: 3678610
+
+==============================================
+All configs (1 to 24) scheduled!
+Waiting for remaining jobs to complete...
+==============================================
+
+==============================================
+COMPLETE! All configurations finished.
+Logs: logs/sweep_parallel_20260407_023610/
+==============================================

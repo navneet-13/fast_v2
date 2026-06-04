@@ -1,0 +1,77 @@
+==============================================
+Detected 8 GPU(s): 0 1 2 3 4 5 6 7
+GPU memory busy threshold: 1000 MB
+==============================================
+
+Current GPU Status:
+----------------------------------------------
+  GPU 0: 20562MB / 23028MB - OCCUPIED
+  GPU 1: 2MB / 23028MB - AVAILABLE
+  GPU 2: 2MB / 23028MB - AVAILABLE
+  GPU 3: 2MB / 23028MB - AVAILABLE
+  GPU 4: 2MB / 23028MB - AVAILABLE
+  GPU 5: 2MB / 23028MB - AVAILABLE
+  GPU 6: 2MB / 23028MB - AVAILABLE
+  GPU 7: 2MB / 23028MB - AVAILABLE
+----------------------------------------------
+==============================================
+Starting Parallel Configuration Sweep
+Logs will be saved to: logs/sweep_parallel_20260317_131841
+==============================================
+
+Configurations: 8 total, starting from #1
+GPUs available: 8
+
+----------------------------------------------
+[1/8] Dynamo bs=8,
+  [GPU 1] Starting: Dynamo bs=8,
+    Log: logs/sweep_parallel_20260317_131841/dynamo/bs_8,.log
+    PID: 476382
+    GPU 1 memory: 1896MB (confirmed occupied)
+----------------------------------------------
+[2/8] Sparse ratio=0.25 bs=8,
+  [GPU 2] Starting: Sparse ratio=0.25 bs=8,
+    Log: logs/sweep_parallel_20260317_131841/sparse_ratio_0.25/bs_8,.log
+    PID: 476749
+    GPU 2 memory: 4920MB (confirmed occupied)
+----------------------------------------------
+[3/8] Sparse ratio=0.50 bs=8,
+  [GPU 1] Starting: Sparse ratio=0.50 bs=8,
+    Log: logs/sweep_parallel_20260317_131841/sparse_ratio_0.50/bs_8,.log
+    PID: 477187
+    GPU 1 memory: 9680MB (confirmed occupied)
+----------------------------------------------
+[4/8] Sparse ratio=0.75 bs=8,
+  [GPU 2] Starting: Sparse ratio=0.75 bs=8,
+    Log: logs/sweep_parallel_20260317_131841/sparse_ratio_0.75/bs_8,.log
+    PID: 477799
+    GPU 2 memory: 6858MB (confirmed occupied)
+----------------------------------------------
+[5/8] Dynamo bs=16
+  [GPU 1] Starting: Dynamo bs=16
+    Log: logs/sweep_parallel_20260317_131841/dynamo/bs_16.log
+    PID: 478299
+    GPU 1 memory: 4920MB (confirmed occupied)
+----------------------------------------------
+[6/8] Sparse ratio=0.25 bs=16
+  [GPU 2] Starting: Sparse ratio=0.25 bs=16
+    Log: logs/sweep_parallel_20260317_131841/sparse_ratio_0.25/bs_16.log
+    PID: 478722
+    GPU 2 memory: 5310MB (confirmed occupied)
+----------------------------------------------
+[7/8] Sparse ratio=0.50 bs=16
+  [GPU 3] Starting: Sparse ratio=0.50 bs=16
+    Log: logs/sweep_parallel_20260317_131841/sparse_ratio_0.50/bs_16.log
+    PID: 479118
+    GPU 3 memory: 1250MB (confirmed occupied)
+----------------------------------------------
+[8/8] Sparse ratio=0.75 bs=16
+  [GPU 4] Starting: Sparse ratio=0.75 bs=16
+    Log: logs/sweep_parallel_20260317_131841/sparse_ratio_0.75/bs_16.log
+    PID: 479408
+    GPU 4 memory: 3964MB (confirmed occupied)
+
+==============================================
+All configs (1 to 8) scheduled!
+Waiting for remaining jobs to complete...
+==============================================

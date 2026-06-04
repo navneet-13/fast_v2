@@ -1,0 +1,92 @@
+GPU: NVIDIA RTX A5000
+Block size: 32, Batch sizes: [1, 2, 4, 8, 16]
+Past blocks range: [5, 15, 25, 35]
+Warmup: 10, Measure: 50
+
+Running eager bs=1 (subprocess)...
+  Done: 4 configs
+Running compiled bs=1 (subprocess)...
+  Done: 4 configs
+
+Running eager bs=2 (subprocess)...
+  Done: 4 configs
+Running compiled bs=2 (subprocess)...
+  Done: 4 configs
+
+Running eager bs=4 (subprocess)...
+  Done: 4 configs
+Running compiled bs=4 (subprocess)...
+  Done: 4 configs
+
+Running eager bs=8 (subprocess)...
+  Done: 4 configs
+Running compiled bs=8 (subprocess)...
+  Done: 4 configs
+
+Running eager bs=16 (subprocess)...
+  Done: 4 configs
+Running compiled bs=16 (subprocess)...
+  Done: 4 configs
+
+==========================================================================================
+  FORWARD PASS BENCHMARK: Eager vs Compiled (reduce-overhead + CUDA graphs)
+  GPU: NVIDIA RTX A5000
+  Model: Fast_dLLM_v2_7B (bf16), block_size=32
+  Warmup: 10 iters, Measured: 50 iters (trimmed mean, drop top/bottom 10%)
+==========================================================================================
+
+  ── batch_size=1 ──
+  Past  Seq Len       Eager    Compiled   Speedup   Eager Med    Comp Med
+  ----  -------  ----------  ----------  --------  ----------  ----------
+     5      160      31.825      29.383     1.08x      31.817      29.383
+    15      480      31.961      29.507     1.08x      31.957      29.506
+    25      800      32.142      29.661     1.08x      32.141      29.659
+    35     1120      32.297      29.841     1.08x      32.299      29.840
+   Avg               32.056      29.598     1.08x
+
+  ── batch_size=2 ──
+  Past  Seq Len       Eager    Compiled   Speedup   Eager Med    Comp Med
+  ----  -------  ----------  ----------  --------  ----------  ----------
+     5      160      35.506      33.096     1.07x      35.498      33.097
+    15      480      35.727      33.297     1.07x      35.737      33.303
+    25      800      36.242      33.844     1.07x      36.246      33.840
+    35     1120      36.257      33.897     1.07x      36.256      33.899
+   Avg               35.933      33.533     1.07x
+
+  ── batch_size=4 ──
+  Past  Seq Len       Eager    Compiled   Speedup   Eager Med    Comp Med
+  ----  -------  ----------  ----------  --------  ----------  ----------
+     5      160      38.523      36.625     1.05x      38.509      36.591
+    15      480      39.388      37.536     1.05x      39.364      37.529
+    25      800      40.082      38.448     1.04x      40.052      38.478
+    35     1120      40.891      39.338     1.04x      40.907      39.322
+   Avg               39.721      37.987     1.05x
+
+  ── batch_size=8 ──
+  Past  Seq Len       Eager    Compiled   Speedup   Eager Med    Comp Med
+  ----  -------  ----------  ----------  --------  ----------  ----------
+     5      160      60.078      58.568     1.03x      60.023      58.624
+    15      480      61.287      60.377     1.02x      61.299      60.419
+    25      800      63.081      61.518     1.03x      63.090      61.540
+    35     1120      64.995      63.307     1.03x      65.022      63.326
+   Avg               62.360      60.943     1.02x
+
+  ── batch_size=16 ──
+  Past  Seq Len       Eager    Compiled   Speedup   Eager Med    Comp Med
+  ----  -------  ----------  ----------  --------  ----------  ----------
+     5      160     109.223     106.235     1.03x     109.282     106.187
+    15      480     113.280     109.226     1.04x     113.293     109.214
+    25      800     116.902     113.218     1.03x     116.926     113.319
+    35     1120     120.087     116.694     1.03x     120.094     116.637
+   Avg              114.873     111.343     1.03x
+
+==========================================================================================
+  SUMMARY: Average forward latency by batch size
+    BS  Eager (ms)  Compiled (ms)   Speedup
+  ----  ----------  -------------  --------
+     1      32.056         29.598     1.08x
+     2      35.933         33.533     1.07x
+     4      39.721         37.987     1.05x
+     8      62.360         60.943     1.02x
+    16     114.873        111.343     1.03x
+==========================================================================================

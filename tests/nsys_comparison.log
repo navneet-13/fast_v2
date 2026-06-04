@@ -1,0 +1,196 @@
+==============================================================================================
+  NSYS FORWARD PASS COMPARISON: Eager vs Compiled (reduce-overhead)
+  Config: BS=8, past_blocks=10 (seq_len=320), block_size=32
+  Measured iterations: 5 (warmup + CUDA graph recording excluded)
+  Capture: cudaProfilerApi (only measurement region profiled)
+  Flags: --cuda-graph-trace=node (individual kernels inside CUDA graphs)
+==============================================================================================
+
+──────────────────────────────────────────────────────────────────────────────────────────────
+  SECTION 1: PER-ITERATION WALL TIME (NVTX ranges)
+  Each range spans one forward pass including cudaDeviceSynchronize.
+──────────────────────────────────────────────────────────────────────────────────────────────
+
+  ── EAGER ──
+  Iteration             Wall Time (ms)
+  --------------------  --------------
+  eager_iter_0                  57.614
+  eager_iter_1                  60.160
+  eager_iter_2                  59.813
+  eager_iter_3                  59.335
+  eager_iter_4                  59.263
+  Average                       59.237
+  Std Dev                        0.875
+
+  ── COMPILED ──
+  Iteration             Wall Time (ms)
+  --------------------  --------------
+  compiled_iter_0               53.822
+  compiled_iter_1               56.982
+  compiled_iter_2               56.802
+  compiled_iter_3               56.448
+  compiled_iter_4               56.324
+  Average                       56.076
+  Std Dev                        1.152
+
+──────────────────────────────────────────────────────────────────────────────────────────────
+  SECTION 2: HOST-SIDE CUDA API OVERHEAD
+  Time the CPU spends dispatching work to the GPU.
+  Eager: one cudaLaunchKernel per op. Compiled: one cudaGraphLaunch per fwd pass.
+──────────────────────────────────────────────────────────────────────────────────────────────
+
+  ── EAGER CUDA API Calls ──
+  API Function                      Calls  Total (ms)    Avg (us)    Med (us)    Min (us)    Max (us)
+  ------------------------------  -------  ----------  ----------  ----------  ----------  ----------
+  cudaDeviceSynchronize                 5     134.617     26923.5     27679.0     24083.0     28141.3
+  cudaLaunchKernel                   5975      38.400         6.4         6.1         4.7        53.7
+  cuMemSetAccess                        6       1.345       224.1       180.6       163.6       328.6
+  cuMemMap                              8       0.592        73.9        70.1        63.1       106.9
+  cuMemCreate                           8       0.395        49.4        47.7        29.8        76.5
+  cuProfilerStart                       1       0.013        13.5        13.5        13.5        13.5
+
+  ── COMPILED CUDA API Calls ──
+  API Function                      Calls  Total (ms)    Avg (us)    Med (us)    Min (us)    Max (us)
+  ------------------------------  -------  ----------  ----------  ----------  ----------  ----------
+  cudaDeviceSynchronize                 5     271.767     54353.5     54911.7     51469.5     55343.5
+  cudaGraphLaunch                       5       3.579       715.7       684.7       675.1       833.3
+  cudaStreamIsCapturing                 5       0.008         1.5         1.5         1.3         1.9
+  cuProfilerStart                       1       0.006         6.3         6.3         6.3         6.3
+
+  ── HOST-SIDE LAUNCH OVERHEAD COMPARISON ──
+  (per forward pass, averaged over 5 iterations)
+
+  Metric                                        Eager        Compiled         Savings
+  -----------------------------------  --------------  --------------  --------------
+  Dispatch mechanism                   cudaLaunchKernel  cudaGraphLaunch
+  Total dispatch calls                           5975               5           1195x
+  Dispatch calls / fwd pass                      1195               1           1195x
+  Total dispatch time (ms)                     38.400           3.579         34.821
+  Dispatch time / fwd pass (ms)                 7.680           0.716          6.964
+  Avg per-call latency (us)                       6.4           715.7
+  cudaDeviceSynchronize (ms)                  134.617         271.767
+
+  Launch overhead as % of wall time             22.2%            1.3%
+
+  Note: Eager launch calls overlap with GPU execution (CPU queues next kernel
+  while GPU runs the current one). The 34.8 ms dispatch savings
+  does not translate 1:1 to wall-time improvement because of this overlap.
+  Launch overhead becomes a bottleneck at small batch sizes where GPU kernels
+  finish faster than the CPU can dispatch them.
+
+──────────────────────────────────────────────────────────────────────────────────────────────
+  SECTION 3: GPU KERNEL BREAKDOWN
+  Top kernels by total GPU execution time across all measured iterations.
+──────────────────────────────────────────────────────────────────────────────────────────────
+
+  ── EAGER Top 15 CUDA Kernels ──
+  Total GPU time: 285.637 ms  |  Unique kernels: 26  |  Per fwd pass: 57.127 ms
+    #   Calls  Total (us)    Avg (us)   %GPU   Cum%  Kernel Name
+  ---  ------  ----------  ----------  -----  -----  -------------------------------------------------------
+    1     285    146537.5       514.2   51.3   51.3  ampere_bf16_s16816gemm_bf16_256x128_ldg8_f2f_stages_32x3_tn
+    2     280     68668.7       245.2   24.0   75.3  ampere_bf16_s16816gemm_bf16_128x128_ldg8_f2f_stages_32x5_tn
+    3     140     15429.7       110.2    5.4   80.7  ampere_bf16_s16816gemm_bf16_128x64_ldg8_relu_f2f_stages_32x6_tn
+    4     140     10487.1        74.9    3.7   84.4  void flash::flash_fwd_kernel<Flash_fwd_kernel_traits<(int)128, (int...
+    5     140      6500.6        46.4    2.3   86.7  void at::native::vectorized_elementwise_kernel<(int)4, at::native::...
+    6     845      5842.4         6.9    2.0   88.7  void at::native::elementwise_kernel<(int)128, (int)4, void at::nati...
+    7     280      5182.4        18.5    1.8   90.6  ampere_bf16_s16816gemm_bf16_128x64_ldg8_f2f_stages_32x6_tn
+    8     140      4212.2        30.1    1.5   92.0  void at::native::vectorized_elementwise_kernel<(int)4, at::native::...
+    9     285      3253.6        11.4    1.1   93.2  void at::native::elementwise_kernel<(int)128, (int)2, void at::nati...
+   10     285      2796.6         9.8    1.0   94.1  void at::native::reduce_kernel<(int)512, (int)1, at::native::Reduce...
+   11     560      2614.3         4.7    0.9   95.1  void at::native::vectorized_elementwise_kernel<(int)4, at::native::...
+   12     280      2514.6         9.0    0.9   95.9  void at::native::<unnamed>::CatArrayBatchedCopy<at::native::<unname...
+   13     290      2290.0         7.9    0.8   96.7  void at::native::unrolled_elementwise_kernel<at::native::direct_cop...
+   14     285      2110.8         7.4    0.7   97.5  void at::native::vectorized_elementwise_kernel<(int)4, void at::nat...
+   15     280      2099.0         7.5    0.7   98.2  void at::native::_scatter_gather_elementwise_kernel<(int)128, (int)...
+
+  ── COMPILED Top 15 CUDA Kernels ──
+  Total GPU time: 272.781 ms  |  Unique kernels: 23  |  Per fwd pass: 54.556 ms
+    #   Calls  Total (us)    Avg (us)   %GPU   Cum%  Kernel Name
+  ---  ------  ----------  ----------  -----  -----  -------------------------------------------------------
+    1     285    148585.9       521.4   54.5   54.5  ampere_bf16_s16816gemm_bf16_256x128_ldg8_f2f_stages_32x3_tn
+    2     280     69736.2       249.1   25.6   80.0  ampere_bf16_s16816gemm_bf16_128x128_ldg8_f2f_stages_32x5_tn
+    3     140     15087.0       107.8    5.5   85.6  ampere_bf16_s16816gemm_bf16_128x64_ldg8_relu_f2f_stages_32x6_tn
+    4     140     10772.8        76.9    3.9   89.5  void flash::flash_fwd_kernel<Flash_fwd_kernel_traits<(int)128, (int...
+    5     140      6440.2        46.0    2.4   91.9  triton_poi_fused__unsafe_view_mul_silu_7
+    6     280      5151.4        18.4    1.9   93.8  ampere_bf16_s16816gemm_bf16_128x64_ldg8_f2f_stages_32x6_tn
+    7     280      3774.5        13.5    1.4   95.1  triton_poi_fused__to_copy_add_bmm_cat_cos_mul_neg_scatter_sin_slice...
+    8     280      3372.1        12.0    1.2   96.4  triton_poi_fused_copy__5
+    9     280      2667.5         9.5    1.0   97.4  void at::native::_scatter_gather_elementwise_kernel<(int)128, (int)...
+   10     140      1612.5        11.5    0.6   98.0  triton_poi_fused__to_copy_add_bmm_cat_cos_flash_kvcache_mul_neg_sin...
+   11      65      1184.9        18.2    0.4   98.4  triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt_13
+   12     280      1149.1         4.1    0.4   98.8  void cublasLt::splitKreduce_kernel<(int)32, (int)16, int, __nv_bflo...
+   13      65       996.5        15.3    0.4   99.2  triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt_12
+   14      65       805.6        12.4    0.3   99.5  triton_red_fused__to_copy__unsafe_view_add_mean_mul_pow_rsqrt_11
+   15     140       646.3         4.6    0.2   99.7  triton_poi_fused__to_copy_add_bmm_cat_cos_mul_neg_sin_slice_transpo...
+
+──────────────────────────────────────────────────────────────────────────────────────────────
+  SECTION 4: KERNEL CATEGORY BREAKDOWN
+  Kernels grouped by type: GEMM, Attention, Triton fused, Elementwise, Other.
+──────────────────────────────────────────────────────────────────────────────────────────────
+
+  ── EAGER ──
+  Category                   GPU Time (ms)    %GPU   Launches  Unique    Avg (us)
+  -------------------------  ------------  ------  ---------  ------  ----------
+  GEMM (cuBLAS)                   237.026   83.0%       1270       6       186.6
+  Elementwise (PyTorch)            32.793   11.5%       3995      16         8.2
+  Attention (FlashAttn)            10.487    3.7%        140       1        74.9
+  Reduce (PyTorch)                  2.797    1.0%        285       1         9.8
+  Copy/Cat                          2.534    0.9%        285       2         8.9
+
+  ── COMPILED ──
+  Category                   GPU Time (ms)    %GPU   Launches  Unique    Avg (us)
+  -------------------------  ------------  ------  ---------  ------  ----------
+  GEMM (cuBLAS)                   239.721   87.9%       1270       6       188.8
+  Triton fused                     18.007    6.6%       1130      14        15.9
+  Attention (FlashAttn)            12.385    4.5%        280       2        44.2
+  Elementwise (PyTorch)             2.668    1.0%        280       1         9.5
+
+──────────────────────────────────────────────────────────────────────────────────────────────
+  SECTION 5: SIDE-BY-SIDE SUMMARY
+──────────────────────────────────────────────────────────────────────────────────────────────
+
+  Metric                                             Eager        Compiled      Ratio/Diff
+  ----------------------------------------  --------------  --------------  --------------
+  Total GPU time (ms)                              285.637         272.781           1.05x
+  GPU time / fwd pass (ms)                          57.127          54.556         +2.571
+  Total kernel launches                               5975            2960            2.0x
+  Kernel launches / fwd pass                          1195             592
+  Unique kernel types                                   26              23
+  Avg kernel duration (us)                           47.81           92.16
+  Host dispatch overhead (ms)                       38.400           3.579        +34.821
+  Host dispatch / fwd pass (ms)                      7.680           0.716         +6.964
+
+  Category Breakdown                            Eager (ms)   Compiled (ms)       Diff (ms)
+  ----------------------------------------  --------------  --------------  --------------
+  GEMM (cuBLAS)                                    237.026         239.721         -2.695
+  Elementwise (PyTorch)                             32.793           2.668        +30.125
+  Triton fused                                       0.000          18.007        -18.007
+  Attention (FlashAttn)                             10.487          12.385         -1.898
+  Reduce (PyTorch)                                   2.797           0.000         +2.797
+  Copy/Cat                                           2.534           0.000         +2.534
+
+──────────────────────────────────────────────────────────────────────────────────────────────
+  SECTION 6: KEY TAKEAWAYS
+──────────────────────────────────────────────────────────────────────────────────────────────
+
+  1. GPU COMPUTE: Compiled saves 12.9 ms (4.5%) total GPU time over 5 iterations.
+     Per forward pass: 2.6 ms savings.
+
+  2. GEMM DOMINANCE: cuBLAS GEMMs account for ~83% of GPU time in both modes.
+     These are identical between eager/compiled — compilation cannot optimize them.
+
+  3. TRITON FUSION: Compiled mode fuses elementwise ops (silu, mul, RMSNorm, RoPE, copy)
+     into triton kernels. This eliminates intermediate memory traffic and reduces
+     kernel count from 26 to 23 unique types.
+
+  4. HOST OVERHEAD: Eager dispatches 1195 cudaLaunchKernel calls per fwd pass.
+     Compiled replaces these with 1 cudaGraphLaunch call.
+     Host dispatch savings: 6.96 ms/fwd pass.
+     However, launch calls overlap with GPU execution, so the wall-time
+     impact is smaller than the raw API time difference.
+
+  5. SCALING: Launch overhead matters more at small batch sizes where GPU kernels
+     are short and the CPU becomes the bottleneck. At larger batch sizes, GPU
+     compute dominates and the launch overhead is hidden by overlap.
+
+==============================================================================================

@@ -1,0 +1,15 @@
+
+============================================
+  eager BS=1 (limit=32)
+============================================
+The following values were not passed to `accelerate launch` and had defaults used instead:
+	`--num_machines` was set to a value of `1`
+	`--mixed_precision` was set to a value of `'no'`
+	`--dynamo_backend` was set to a value of `'no'`
+To avoid this warning pass in values for each of the problematic parameters or run `accelerate config`.
+2026-03-22:15:05:32 WARNING  [config.evaluate_config:281] --limit SHOULD ONLY BE USED FOR TESTING. REAL METRICS SHOULD NOT BE COMPUTED USING LIMIT.
+2026-03-22:15:05:48 INFO     [_cli.run:376] Selected Tasks: ['gsm8k']
+2026-03-22:15:05:48 INFO     [evaluator:211] Setting random seed to 0 | Setting numpy seed to 1234 | Setting torch manual seed to 1234 | Setting fewshot manual seed to 1234
+2026-03-22:15:05:48 INFO     [evaluator:236] Initializing fast_dllm_v2 model, with arguments: {'model_path': './models/models--Efficient-Large-Model--Fast_dLLM_v2_7B/snapshots/0661abf5f9f0ee338970d091052a26c8efa51974/', 'threshold': 0.9, 'show_speed': True}
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:00<00:00,  5.00it/s]Loading checkpoint shards:  50%|█████     | 2/4 [00:00<00:00,  4.66it/s]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:00<00:00,  4.78it/s]Loading checkpoint shards: 100%|██████████| 4/4 [00:00<00:00,  6.34it/s]
+Using static KV / torch.compile / CUDA-graph optimized path
