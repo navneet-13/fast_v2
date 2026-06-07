@@ -38,6 +38,10 @@ FAST_DLLM_STOP_TOKEN = 151645
 # Counts per-sequence token-layers = sum over diffusion forwards of
 # (input token positions x num decoder layers). Measurement-only; no behavior change.
 _BASELINE_FLOP = {"tl": 0, "calls": 0}
+# dKV token-layer accounting (FAST_DLLM_TL_COUNT=1). decode_tl = actual q-tokens x layers spent on
+# diffusion steps; decode_full_equiv_tl = what the SAME trajectory would cost with every step full
+# (block_size x layers). saving = 1 - decode_tl/decode_full_equiv_tl isolates the caching effect.
+_DKV_FLOP = {"decode_tl": 0, "decode_full_equiv_tl": 0, "commit_tl": 0, "steps_full": 0, "steps_cached": 0}
 
 MASK_COLOR = 0.5
 TOKEN_COLOR = -0.5
@@ -2165,6 +2169,8 @@ class Fast_dLLM_QwenForCausalLM:
         num_layers = self.config.num_hidden_layers
         num_kv_heads = self.config.num_key_value_heads
         head_dim = self.config.hidden_size // self.config.num_attention_heads
+        _tl_count = os.environ.get("FAST_DLLM_TL_COUNT", "0") == "1"
+        _nlayers = num_layers
 
         num_blocks = max_new_tokens // block_size + seq_len.max().item() // block_size
         batch_size = input_ids.shape[0]
@@ -2229,6 +2235,8 @@ class Fast_dLLM_QwenForCausalLM:
                     if finished_flag.all():
                         break
                     output = self.forward(input_ids=x_t[:, -block_size:], use_cache=True, past_key_values=past_key_values, update_past_key_values=True, block_size=block_size)
+                    if _tl_count:
+                        _DKV_FLOP["commit_tl"] += x_t[:, -block_size:].shape[1] * _nlayers
                     logits, past_key_values = output.logits, output.past_key_values
                     next_token = logits[:, -1:, :].argmax(dim=-1)
                     next_token[finished_flag] = tokenizer.pad_token_id
@@ -2254,9 +2262,17 @@ class Fast_dLLM_QwenForCausalLM:
                         is_full = (step_in_block <= 1) or (step_in_block % refresh_steps == 0)
                         if is_full:
                             output = self.forward_dkv(input_ids=x_t[:, -block_size:], use_cache=True, past_key_values=past_key_values, dkv_store=block_kv, is_full_step=True)
+                            if _tl_count:
+                                _DKV_FLOP["decode_tl"] += x_t[:, -block_size:].shape[1] * _nlayers
+                                _DKV_FLOP["decode_full_equiv_tl"] += x_t[:, -block_size:].shape[1] * _nlayers
+                                _DKV_FLOP["steps_full"] += 1
                         else:
                             fed_indices, _ = self._dkv_fed_indices(prv_transfer_idx)
                             output = self.forward_dkv(input_ids=x_t[:, -block_size:], use_cache=True, past_key_values=past_key_values, dkv_store=block_kv, fed_indices=fed_indices, is_full_step=False)
+                            if _tl_count:
+                                _DKV_FLOP["decode_tl"] += fed_indices.shape[1] * _nlayers
+                                _DKV_FLOP["decode_full_equiv_tl"] += x_t[:, -block_size:].shape[1] * _nlayers
+                                _DKV_FLOP["steps_cached"] += 1
                         step_in_block += 1
                         logits = output.logits
                         logits = torch.cat([logits[:, :1, :], logits[:, :-1, :]], dim=1)
@@ -2314,6 +2330,14 @@ class Fast_dLLM_QwenForCausalLM:
                 original_idx = sample_indices[sample_idx].item()
                 finished_samples[original_idx] = x_t[sample_idx:sample_idx + 1].clone().squeeze(dim=0)
         assert len(finished_samples) == batch_size
+        if _tl_count:
+            d, fe = _DKV_FLOP["decode_tl"], _DKV_FLOP["decode_full_equiv_tl"]
+            c = _DKV_FLOP["commit_tl"]
+            sav_dec = (1 - d / fe) if fe else 0.0
+            sav_tot = (1 - (d + c) / (fe + c)) if (fe + c) else 0.0
+            print(f"[dkv_flops] refresh={refresh_steps} steps_full={_DKV_FLOP['steps_full']} "
+                  f"steps_cached={_DKV_FLOP['steps_cached']} decode_tl={d} decode_full_equiv_tl={fe} "
+                  f"commit_tl={c} saving_decode={sav_dec:.4f} saving_total={sav_tot:.4f}", flush=True)
         return finished_samples
 
     @torch.no_grad()

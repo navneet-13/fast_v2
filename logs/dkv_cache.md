@@ -169,3 +169,47 @@ b16/1000 GSM8K (flex-extract, threshold=0.9, eager), one run per GPU, same machi
 refresh=1 == dense (byte-identical confirmed at 1000). refresh=2 = lossless + ~11% TPS (sweet spot).
 TPS saturates fast (r2→r8 only +4%) while accuracy falls; small recompute-skip at block_size=32 /
 sub_block=8 / eager. Logs: logs/dkv_sweep_{dense,r1,r2,r4,r8}.log.
+
+### batch_size=1 sweep (b1/300, same setup) — dKV does NOT help at b1
+
+| config | accuracy | TPS | vs dense |
+|---|---|---|---|
+| dense baseline | 0.85  ±0.021 | 81.97 | 1.00× |
+| dKV refresh=1  | 0.85  ±0.021 | 81.32 | 0.99× |
+| dKV refresh=2  | 0.853 ±0.021 | 80.05 | 0.98× |
+| dKV refresh=4  | 0.84  ±0.021 | 77.26 | 0.94× |
+| dKV refresh=8  | 0.76  ±0.025 | 71.73 | 0.87× |
+
+At batch=1 the GPU is latency-bound on tiny 32-token blocks, so the cached step's overhead (buffer
+write/get/scatter + mask gather) is NOT offset by skipped recompute — TPS DROPS and worsens with
+refresh (dense 82 → r8 72), the opposite of b16 (+11% at r2). Accuracy pattern matches b16: r1==dense
+(lossless), r2 lossless, r4 within 300-sample CI (±0.021), r8 a real drop. dKV's benefit is
+batch-size-dependent: throughput win at b16, slight latency cost at b1.
+Logs: logs/dkv_b1_300_{dense,r1,r2,r4,r8}.log. (b1/1000 runs were killed before finishing.)
+
+### Analytical FLOP-proxy saving (token-layers = q-tokens x layers; FAST_DLLM_TL_COUNT=1)
+
+Token-layers proxy the dominant linear/projection FLOPs (K/V proj + attention-score + MLP all scale
+with q-tokens processed). A full step = block_size(32) x layers(28) = 896 TL; a cached step =
+num_fed x 28. Script: tests/dkv_flops.py (8 GSM8K prompts, max_new_tokens=256). Counters in
+generation_functions._DKV_FLOP. full_equiv counts EVERY step (full AND cached) as full = total_steps
+x 896 — i.e. this same trajectory with caching disabled.
+
+| refresh | total steps | decode_TL (actual) | full_equiv | per-traj saving | vs-dense saving |
+|---|---|---|---|---|---|
+| 1 | 629 | 563,584 | 563,584 |  0.0% |   —    |
+| 2 | 723 | 522,928 | 647,808 | 19.3% |  7.2%  |
+| 4 | 718 | 451,108 | 643,328 | 29.9% | 20.0%  |
+| 8 | 698 | 407,176 | 625,408 | 34.9% | 27.8%  |
+
+Columns: total steps = diffusion steps that trajectory took (sum over 8 samples); decode_TL = actual
+token-layers spent; full_equiv = total_steps x 896 (every step charged as full); per-traj saving =
+1 - decode_TL/full_equiv (caching effect, fixed trajectory); vs-dense saving = 1 - decode_TL(rN)/
+decode_TL(r1) (honest saving vs dense, since r1 is byte-identical to dense).
+
+KEY: caching LENGTHENS the trajectory (r1=629 steps; r2/r4/r8=698-723) because approximate cached
+steps need extra diffusion iterations to converge. So per-traj saving overstates the win. Clean
+decomposition: net_retained_vs_dense = (steps_rN/steps_r1) x (1 - per_traj_saving)
+e.g. r2: 1.149 x 0.807 = 0.928 -> 7.2% saved. The true compute saving at the lossless r2 is only
+~7%, which is why b16 wall-clock gained ~11% (also fewer/smaller kernels) and b1 (latency-bound) got
+slower. r8 saves ~28% FLOPs but drops accuracy to 0.76.
