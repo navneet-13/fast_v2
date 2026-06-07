@@ -94,6 +94,17 @@ class Fast_dLLM_v2EvalHarness(LM):
             self.model.mdm_sample = types.MethodType(
                 generation_functions.Fast_dLLM_QwenForCausalLM.batch_sample_fused, self.model
             )
+        elif os.environ.get("FAST_DLLM_DKV_CACHE", "0") == "1":
+            if os.environ.get("FAST_DLLM_DKV_STATIC", "0") == "1":
+                print("Using dKV-Cache diffusion mode (delayed KV, StaticKVCache path)", flush=True)
+                self.model.mdm_sample = types.MethodType(
+                    generation_functions.Fast_dLLM_QwenForCausalLM.batch_sample_dkv_static, self.model
+                )
+            else:
+                print("Using dKV-Cache diffusion mode (delayed KV, no eviction, DynamicCache path)", flush=True)
+                self.model.mdm_sample = types.MethodType(
+                    generation_functions.Fast_dLLM_QwenForCausalLM.batch_sample_dkv, self.model
+                )
         elif os.environ.get("FAST_DLLM_USE_FOCUS", "0") == "1":
             if os.environ.get("FAST_DLLM_FOCUS_DYNAMIC", "0") == "1":
                 print("Using FOCUS token-skipping diffusion mode (DynamicCache path)", flush=True)

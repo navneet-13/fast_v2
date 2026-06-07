@@ -334,6 +334,8 @@ class Fast_dLLM_QwenAttention(nn.Module):
         update_past_key_values: Optional[bool] = False,
         block_past_key_values: Optional[Cache] = None,
         replace_position: Optional[int] = None,
+        dkv_store=None,
+        dkv_positions=None,
         **kwargs: Unpack[FlashAttentionKwargs],
     ) -> tuple[torch.Tensor, Optional[torch.Tensor], Optional[tuple[torch.Tensor]]]:
         input_shape = hidden_states.shape[:-1]
@@ -358,6 +360,14 @@ class Fast_dLLM_QwenAttention(nn.Module):
             key_states = torch.cat((k_1, k_2), dim=-2)
         else:
             query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
+
+        if dkv_store is not None:
+            # dKV-Cache: persist this step's post-RoPE K/V into the per-block buffer at
+            # dkv_positions, then attend over the WHOLE buffer (settled frozen slots +
+            # this step's fresh slots). The past_key_value branch below then prepends the
+            # committed prefix, so attention runs over cat(prefix, full_block_buffer).
+            dkv_store.write(self.layer_idx, key_states, value_states, dkv_positions)
+            key_states, value_states = dkv_store.get(self.layer_idx)
 
         if block_past_key_values is not None:
             if len(block_past_key_values) <= self.layer_idx:
@@ -1279,6 +1289,95 @@ class Fast_dLLM_QwenModel(Fast_dLLM_QwenPreTrainedModel):
             past_key_values=past_key_values if use_cache else None,
         )
 
+    def forward_dkv_static(
+        self,
+        input_ids=None, past_key_values=None, use_cache: bool = True,
+        cache_position=None, update_past_key_values: bool = False,
+        fed_indices=None, is_full_step: bool = True, attn_backend=None, **kwargs,
+    ):
+        """dKV-Cache on the StaticKVCache substrate. is_full_step=True -> dense
+        forward over ALL positions via real self_attn (writes all-layer KV);
+        saves _dkv_static_seed_hidden (pre-norm). is_full_step=False -> cached
+        step: recompute only fed_indices through all layers, write_sparse fed K/V
+        into the static buffer, attend via flash_kvcache over the buffer."""
+        hidden_states = self.embed_tokens(input_ids)
+        if cache_position is None:
+            past_seen = past_key_values.get_seq_length() if past_key_values is not None else 0
+            cache_position = torch.arange(past_seen, past_seen + hidden_states.shape[1], device=hidden_states.device)
+        position_ids = cache_position.unsqueeze(0)
+        attention_mask = None
+        position_embeddings = self.rotary_emb(hidden_states, position_ids)
+        cos_full, sin_full = position_embeddings
+        cos_sin_full = torch.cat([cos_full, sin_full], dim=-1)
+        B = hidden_states.shape[0]
+        seq_len = hidden_states.shape[1]
+        num_layers = self.config.num_hidden_layers
+        num_heads = self.config.num_attention_heads
+        num_kv_heads = self.config.num_key_value_heads
+        head_dim = self.config.hidden_size // num_heads
+
+        def _dense_layer_nc(layer_idx, hs):
+            dl = self.layers[layer_idx]
+            residual = hs
+            hsn = dl.input_layernorm(hs)
+            attn_out = dl.self_attn(
+                hsn, position_embeddings=position_embeddings,
+                attention_mask=attention_mask, past_key_value=past_key_values,
+                cache_position=cache_position, update_past_key_values=update_past_key_values,
+            )
+            hs = residual + attn_out
+            residual = hs
+            hsn = dl.post_attention_layernorm(hs)
+            hs = residual + dl.mlp(hsn)
+            return hs
+
+        if is_full_step:
+            for layer_idx in range(num_layers):
+                hidden_states = _dense_layer_nc(layer_idx, hidden_states)
+            self._dkv_static_seed_hidden = hidden_states.clone()
+            hidden_states = self.norm(hidden_states)
+            return BaseModelOutputWithPastAndBlockCache(
+                last_hidden_state=hidden_states,
+                past_key_values=past_key_values if use_cache else None,
+            )
+
+        num_tokens = fed_indices.shape[1]
+        past_len = past_key_values.get_seq_length()
+        write_positions = fed_indices + past_len
+        idx_h = fed_indices.unsqueeze(-1).expand(-1, -1, hidden_states.shape[-1])
+        hs_sel = hidden_states.gather(1, idx_h)
+        idx_pos = fed_indices.unsqueeze(-1).expand(-1, -1, cos_sin_full.shape[-1])
+        sel_cos, sel_sin = cos_sin_full.expand(B, -1, -1).gather(1, idx_pos).chunk(2, dim=-1)
+
+        for layer_idx in range(num_layers):
+            dl = self.layers[layer_idx]
+            attn = dl.self_attn
+            residual = hs_sel
+            sel_norm = dl.input_layernorm(hs_sel)
+            q = attn.q_proj(sel_norm).view(B, num_tokens, num_heads, head_dim)
+            k = attn.k_proj(sel_norm).view(B, num_tokens, num_kv_heads, head_dim)
+            v = attn.v_proj(sel_norm).view(B, num_tokens, num_kv_heads, head_dim)
+            q, k = apply_rotary_pos_emb(q, k, sel_cos, sel_sin, unsqueeze_dim=2)
+            past_key_values.write_sparse(k, v, layer_idx, write_positions)
+            full_k, full_v = past_key_values.get_full_kv(layer_idx)
+            a = attn_backend.flash_kvcache_attention(
+                q, full_k, full_v, cache_seqlens=past_key_values.scratch_seqlens,
+                is_causal=False, scaling=attn.scaling,
+            )
+            a = a.reshape(B, num_tokens, -1).contiguous()
+            a = attn.o_proj(a)
+            hs_sel = residual + a
+            hs_sel = hs_sel + dl.mlp(dl.post_attention_layernorm(hs_sel))
+
+        seed_hidden = getattr(self, "_dkv_static_seed_hidden", None)
+        base = seed_hidden if (seed_hidden is not None and seed_hidden.shape == hidden_states.shape) else hidden_states
+        hidden_states = base.scatter(1, idx_h, hs_sel)
+        hidden_states = self.norm(hidden_states)
+        return BaseModelOutputWithPastAndBlockCache(
+            last_hidden_state=hidden_states,
+            past_key_values=past_key_values if use_cache else None,
+        )
+
     def forward_focus_compact_dynamic(
         self,
         input_ids=None, past_key_values=None, use_cache: bool = True,
@@ -1403,6 +1502,188 @@ class Fast_dLLM_QwenModel(Fast_dLLM_QwenPreTrainedModel):
         seed_hidden = getattr(self, "_focus_dyn_seed_hidden", None)
         base = seed_hidden if (seed_hidden is not None and seed_hidden.shape == hidden_states.shape) else hidden_states
         hidden_states = base.scatter(1, idx_h, hs_sel)
+        hidden_states = self.norm(hidden_states)
+        return BaseModelOutputWithPastAndBlockCache(
+            last_hidden_state=hidden_states,
+            past_key_values=past_key_values if use_cache else None,
+        )
+
+    def forward_dkv_handrolled(
+        self,
+        input_ids=None, past_key_values=None, use_cache: bool = True,
+        cache_position=None, block_kv=None, fed_indices=None,
+        is_full_step: bool = True, **kwargs,
+    ):
+        """dKV-Cache (original, decode variant) over a DynamicCache prefix + an
+        all-layer per-block KV buffer.
+
+        is_full_step=True  -> seed/refresh: recompute ALL block positions through
+                              all layers and write the full buffer (no caching).
+        is_full_step=False -> cached step: recompute only `fed_indices` (masked ∪
+                              just-decoded) through all layers, attending over
+                              cat(prefix, all-layer buffer). Decoded-≥2 positions
+                              keep their frozen clean K/V in the buffer.
+
+        No importance, no layer split (contrast forward_focus_compact_dynamic).
+        """
+        import torch.nn.functional as F
+        hidden_states = self.embed_tokens(input_ids)
+        B = hidden_states.shape[0]
+        seq_len = hidden_states.shape[1]
+        num_layers = self.config.num_hidden_layers
+        num_heads = self.config.num_attention_heads
+        num_kv_heads = self.config.num_key_value_heads
+        head_dim = self.config.hidden_size // num_heads
+        n_rep = num_heads // num_kv_heads
+        past_len = past_key_values.get_seq_length() if past_key_values is not None else 0
+        if cache_position is None:
+            cache_position = torch.arange(past_len, past_len + seq_len, device=hidden_states.device)
+        position_ids = cache_position.unsqueeze(0)
+        cos_full, sin_full = self.rotary_emb(hidden_states, position_ids)
+        cos_sin_full = torch.cat([cos_full, sin_full], dim=-1)
+        scaling = self.layers[0].self_attn.scaling
+
+        def _prefix_kv(L):
+            if past_key_values is not None and len(past_key_values) > L:
+                return past_key_values[L][0], past_key_values[L][1]
+            return None, None
+
+        def _attn(q, k_bhsd, v_bhsd):
+            if _flash_attn_func is not None and q.is_cuda and q.dtype in (torch.float16, torch.bfloat16):
+                qf = q.transpose(1, 2); kf = k_bhsd.transpose(1, 2); vf = v_bhsd.transpose(1, 2)
+                a = _flash_attn_func(qf, kf, vf, causal=False, softmax_scale=scaling)
+                return a.transpose(1, 2)
+            k = repeat_kv(k_bhsd, n_rep); v = repeat_kv(v_bhsd, n_rep)
+            return F.scaled_dot_product_attention(q, k, v, is_causal=False, scale=scaling)
+
+        def _full_layer(L, hs):
+            dl = self.layers[L]
+            residual = hs
+            hsn = dl.input_layernorm(hs)
+            q = dl.self_attn.q_proj(hsn).view(B, seq_len, num_heads, head_dim)
+            k = dl.self_attn.k_proj(hsn).view(B, seq_len, num_kv_heads, head_dim)
+            v = dl.self_attn.v_proj(hsn).view(B, seq_len, num_kv_heads, head_dim)
+            q, k = apply_rotary_pos_emb(q, k, cos_full, sin_full, unsqueeze_dim=2)
+            q = q.transpose(1, 2); k = k.transpose(1, 2); v = v.transpose(1, 2)
+            if block_kv is not None:
+                block_kv.write_full(L, k, v)
+            pk, pv = _prefix_kv(L)
+            full_k = torch.cat([pk, k], dim=2) if pk is not None else k
+            full_v = torch.cat([pv, v], dim=2) if pv is not None else v
+            a = _attn(q, full_k, full_v)
+            a = a.transpose(1, 2).reshape(B, seq_len, -1)
+            a = dl.self_attn.o_proj(a)
+            hs = residual + a
+            hs = hs + dl.mlp(dl.post_attention_layernorm(hs))
+            return hs
+
+        if is_full_step:
+            for L in range(num_layers):
+                hidden_states = _full_layer(L, hidden_states)
+            self._dkv_seed_hidden = hidden_states.clone()
+            hidden_states = self.norm(hidden_states)
+            return BaseModelOutputWithPastAndBlockCache(
+                last_hidden_state=hidden_states,
+                past_key_values=past_key_values if use_cache else None,
+            )
+
+        num_tokens = fed_indices.shape[1]
+        idx_h = fed_indices.unsqueeze(-1).expand(-1, -1, hidden_states.shape[-1])
+        hs_sel = hidden_states.gather(1, idx_h)
+        idx_pos = fed_indices.unsqueeze(-1).expand(-1, -1, cos_sin_full.shape[-1])
+        sel_cos, sel_sin = cos_sin_full.expand(B, -1, -1).gather(1, idx_pos).chunk(2, dim=-1)
+
+        for L in range(num_layers):
+            dl = self.layers[L]
+            residual = hs_sel
+            sel_norm = dl.input_layernorm(hs_sel)
+            q = dl.self_attn.q_proj(sel_norm).view(B, num_tokens, num_heads, head_dim)
+            k = dl.self_attn.k_proj(sel_norm).view(B, num_tokens, num_kv_heads, head_dim)
+            v = dl.self_attn.v_proj(sel_norm).view(B, num_tokens, num_kv_heads, head_dim)
+            q, k = apply_rotary_pos_emb(q, k, sel_cos, sel_sin, unsqueeze_dim=2)
+            q = q.transpose(1, 2); k = k.transpose(1, 2); v = v.transpose(1, 2)
+            block_kv.write(L, k, v, fed_indices)
+            bk, bv = block_kv.get(L)
+            pk, pv = _prefix_kv(L)
+            full_k = torch.cat([pk, bk], dim=2) if pk is not None else bk
+            full_v = torch.cat([pv, bv], dim=2) if pv is not None else bv
+            a = _attn(q, full_k, full_v)
+            a = a.transpose(1, 2).reshape(B, num_tokens, -1)
+            a = dl.self_attn.o_proj(a)
+            hs_sel = residual + a
+            hs_sel = hs_sel + dl.mlp(dl.post_attention_layernorm(hs_sel))
+
+        seed_hidden = getattr(self, "_dkv_seed_hidden", None)
+        base = seed_hidden if (seed_hidden is not None and seed_hidden.shape == hidden_states.shape) else hidden_states
+        hidden_states = base.scatter(1, idx_h, hs_sel)
+        hidden_states = self.norm(hidden_states)
+        return BaseModelOutputWithPastAndBlockCache(
+            last_hidden_state=hidden_states,
+            past_key_values=past_key_values if use_cache else None,
+        )
+
+    def forward_dkv(
+        self, input_ids=None, past_key_values=None, use_cache: bool = True,
+        cache_position=None, dkv_store=None, fed_indices=None,
+        is_full_step: bool = True, **kwargs,
+    ):
+        """dKV-Cache forward reusing the real decoder_layer/self_attn (lossless).
+        is_full_step=True: run the WHOLE block (writes all buffer slots) -- == dense.
+        is_full_step=False: run only fed_indices through the real layers, attending over
+        cat(prefix, dkv buffer); scatter outputs onto the saved seed hidden."""
+        full_embed = self.embed_tokens(input_ids)
+        B = full_embed.shape[0]
+        block = full_embed.shape[1]
+        past_len = past_key_values.get_seq_length() if past_key_values is not None else 0
+        block_pos = torch.arange(past_len, past_len + block, device=full_embed.device)
+
+        if is_full_step:
+            hidden_states = full_embed
+            pos_ids = block_pos.unsqueeze(0)
+            pe = self.rotary_emb(hidden_states, pos_ids)
+            all_pos = torch.arange(block, device=full_embed.device).unsqueeze(0).expand(B, -1)
+            # Use the SAME block-causal eval_mask as self.forward. None (full attention)
+            # is wrong: when the generated block straddles a block_size grid boundary
+            # (prompt length not a multiple of block_size), eval_mask masks early-query →
+            # late-key attention across the boundary, which the model was trained with.
+            attn_mask = self.eval_mask(block, block, past_len).to(device=full_embed.device)
+            for layer in self.layers[: self.config.num_hidden_layers]:
+                hidden_states = layer(
+                    hidden_states, attention_mask=attn_mask, position_ids=pos_ids,
+                    past_key_value=past_key_values, use_cache=use_cache,
+                    cache_position=block_pos, position_embeddings=pe,
+                    update_past_key_values=False, dkv_store=dkv_store, dkv_positions=all_pos,
+                )
+            self._dkv_seed_hidden = hidden_states.clone()
+            hidden_states = self.norm(hidden_states)
+            return BaseModelOutputWithPastAndBlockCache(
+                last_hidden_state=hidden_states,
+                past_key_values=past_key_values if use_cache else None,
+            )
+
+        num_fed = fed_indices.shape[1]
+        idx_h = fed_indices.unsqueeze(-1).expand(-1, -1, full_embed.shape[-1])
+        hidden_states = full_embed.gather(1, idx_h)
+        fed_abs_pos = (fed_indices + past_len)
+        pos_ids = fed_abs_pos
+        pe = self.rotary_emb(hidden_states, pos_ids)
+        # Cached-step mask. The fed queries attend over cat(prefix, full block buffer) -- the SAME
+        # key layout as the full step. Reuse the SAME block-causal eval_mask and gather the fed
+        # rows per batch element, so a cached step is mask-identical to the full step restricted to
+        # the recomputed tokens. (attention_mask=None is wrong: it lets fed queries attend across
+        # block_size grid boundaries the model was never trained to cross.)
+        full_mask = self.eval_mask(block, block, past_len).to(device=full_embed.device)  # [block, past_len+block]
+        cached_mask = full_mask[fed_indices].unsqueeze(1)  # [B, 1, num_fed, past_len+block]
+        for layer in self.layers[: self.config.num_hidden_layers]:
+            hidden_states = layer(
+                hidden_states, attention_mask=cached_mask, position_ids=pos_ids,
+                past_key_value=past_key_values, use_cache=use_cache,
+                cache_position=fed_abs_pos[0], position_embeddings=pe,
+                update_past_key_values=False, dkv_store=dkv_store, dkv_positions=fed_indices,
+            )
+        seed = getattr(self, "_dkv_seed_hidden", None)
+        base = seed if (seed is not None and seed.shape[:2] == full_embed.shape[:2]) else full_embed
+        hidden_states = base.scatter(1, idx_h, hidden_states)
         hidden_states = self.norm(hidden_states)
         return BaseModelOutputWithPastAndBlockCache(
             last_hidden_state=hidden_states,
@@ -1704,6 +1985,78 @@ class Fast_dLLM_QwenForCausalLM(Fast_dLLM_QwenPreTrainedModel, GenerationMixin):
             loss=None, logits=logits, past_key_values=outputs.past_key_values,
             hidden_states=hidden_states,
         )
+
+    def forward_dkv_static(
+        self,
+        input_ids=None, past_key_values=None, use_cache: bool = True,
+        cache_position=None, update_past_key_values: bool = False,
+        fed_indices=None, is_full_step: bool = True, attn_backend=None, **kwargs,
+    ):
+        outputs = self.model.forward_dkv_static(
+            input_ids=input_ids, past_key_values=past_key_values, use_cache=use_cache,
+            cache_position=cache_position, update_past_key_values=update_past_key_values,
+            fed_indices=fed_indices, is_full_step=is_full_step, attn_backend=attn_backend,
+        )
+        hidden_states = outputs.last_hidden_state
+        logits = self.lm_head(hidden_states)
+        return CausalLMOutputWithPastAndBlockCache(
+            loss=None, logits=logits, past_key_values=outputs.past_key_values,
+            hidden_states=hidden_states,
+        )
+
+    def forward_dkv_handrolled(
+        self,
+        input_ids=None, past_key_values=None, use_cache: bool = True,
+        cache_position=None, block_kv=None, fed_indices=None,
+        is_full_step: bool = True, **kwargs,
+    ):
+        outputs = self.model.forward_dkv_handrolled(
+            input_ids=input_ids, past_key_values=past_key_values, use_cache=use_cache,
+            cache_position=cache_position, block_kv=block_kv, fed_indices=fed_indices,
+            is_full_step=is_full_step, **kwargs,
+        )
+        hidden_states = outputs.last_hidden_state
+        logits = self.lm_head(hidden_states)
+        return CausalLMOutputWithPastAndBlockCache(
+            loss=None, logits=logits, past_key_values=outputs.past_key_values,
+            hidden_states=hidden_states,
+        )
+
+    def forward_dkv(self, input_ids=None, past_key_values=None, use_cache: bool = True,
+                    cache_position=None, dkv_store=None, fed_indices=None,
+                    is_full_step: bool = True, **kwargs):
+        outputs = self.model.forward_dkv(
+            input_ids=input_ids, past_key_values=past_key_values, use_cache=use_cache,
+            cache_position=cache_position, dkv_store=dkv_store, fed_indices=fed_indices,
+            is_full_step=is_full_step)
+        hidden_states = outputs.last_hidden_state
+        logits = self.lm_head(hidden_states)
+        return CausalLMOutputWithPastAndBlockCache(
+            loss=None, logits=logits, past_key_values=outputs.past_key_values,
+            hidden_states=hidden_states)
+
+    @staticmethod
+    def _dkv_fed_indices(prv_transfer_idx):
+        """Compute set for a cached dKV step.
+
+        prv_transfer_idx: [B, block] bool — positions decoded >=2 steps ago (their
+        K/V is frozen in the buffer). The fed (recompute) set is everything else:
+        still-masked ∪ just-decoded-last-step. Returns (fed_indices [B, num_fed]
+        long, num_fed) using the batch-max active count. Rows with fewer active
+        positions are padded by repeating that row's first active index — harmless,
+        since a position recomputed twice just rewrites the same K/V.
+        """
+        import torch
+        fed_mask = ~prv_transfer_idx
+        counts = fed_mask.sum(dim=1)
+        num_fed = max(1, int(counts.max().item()))
+        order = torch.argsort(fed_mask.to(torch.int8), dim=1, descending=True, stable=True)
+        fed_indices = order[:, :num_fed].contiguous()
+        first_active = fed_indices[:, :1]
+        slot = torch.arange(num_fed, device=prv_transfer_idx.device).unsqueeze(0)
+        pad_mask = slot >= counts.clamp(min=1).unsqueeze(1)
+        fed_indices = torch.where(pad_mask, first_active.expand(-1, num_fed), fed_indices)
+        return fed_indices, num_fed
 
     @staticmethod
     def _focus_update_frozen(frozen, mask_idx):

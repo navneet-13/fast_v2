@@ -1642,6 +1642,320 @@ class Fast_dLLM_QwenForCausalLM:
             pass
 
     @torch.no_grad()
+    def batch_sample_dkv_static(
+        self,
+        input_ids,
+        tokenizer,
+        block_size,
+        max_new_tokens,
+        small_block_size,
+        min_len,
+        seq_len,
+        mask_id=151665,
+        threshold=0.95,
+        stop_token=151645,
+        use_block_cache=False,
+        top_p=0.95,
+        temperature=0.0,
+    ):
+        """
+        dKV-Cache on the StaticKVCache substrate. Delayed KV caching, no eviction,
+        periodic refresh. Env: FAST_DLLM_DKV_REFRESH_STEPS (default 4).
+        """
+        # ---- Configuration from environment ----
+        execution_mode = os.environ.get("FAST_DLLM_EXECUTION_MODE", "eager")
+        attn_backend_pref = os.environ.get("FAST_DLLM_ATTENTION_BACKEND", "auto")
+        max_seq_len_env = int(os.environ.get("FAST_DLLM_MAX_SEQ_LEN", "4096"))
+        seq_len_step = int(os.environ.get("FAST_DLLM_SEQ_LEN_STEP", "256"))
+        refresh_steps = int(os.environ.get("FAST_DLLM_DKV_REFRESH_STEPS", "4"))
+        required_len = seq_len.max().item() + max_new_tokens + block_size  # prompt + gen + bridge token headroom
+        required_len = ((required_len + seq_len_step - 1) // seq_len_step) * seq_len_step
+        max_seq_len = max(max_seq_len_env, required_len)
+
+        # ---- Model config ----
+        config = self.config
+        num_layers = config.num_hidden_layers
+        num_kv_heads = config.num_key_value_heads
+        head_dim = config.hidden_size // config.num_attention_heads
+        hidden_size = config.hidden_size
+        batch_size = input_ids.shape[0]
+        original_batch_size = batch_size
+        num_blocks = max_new_tokens // block_size + seq_len.max().item() // block_size
+        num_small_blocks = block_size // small_block_size
+
+        # ---- Create or reuse persistent state ----
+        _need_reinit = (
+            not hasattr(self, '_static_kv_cache')
+            or self._static_kv_cache is None
+            or self._static_kv_cache.batch_size != batch_size
+            or self._static_kv_cache.max_seq_len != max_seq_len
+        )
+        if _need_reinit:
+            # Remove accelerate hooks (same as batch_sample_dynamo)
+            if not getattr(self, '_dynamo_hooks_removed', False):
+                try:
+                    from accelerate.hooks import remove_hook_from_module
+                    for module in self.modules():
+                        if hasattr(module, '_hf_hook'):
+                            remove_hook_from_module(module)
+                except ImportError:
+                    pass
+                self._dynamo_hooks_removed = True
+
+            if hasattr(self, '_dynamo_original_forwards') and self._dynamo_original_forwards:
+                unpatch_attention_layers(self, self._dynamo_original_forwards)
+
+            self._static_kv_cache = StaticKVCache(
+                batch_size=batch_size,
+                max_seq_len=max_seq_len,
+                num_layers=num_layers,
+                num_kv_heads=num_kv_heads,
+                head_dim=head_dim,
+                dtype=self.dtype,
+                device=self.device,
+            )
+            self._block_sparse_cache = BlockSparseCache(
+                num_layers=num_layers,
+                batch_size=batch_size,
+                block_size=block_size,
+                hidden_size=hidden_size,
+                dtype=self.dtype,
+                device=self.device,
+            )
+            attn_backend = get_attention_backend(attn_backend_pref)
+            self._dynamo_attn_backend = attn_backend
+            self._dynamo_original_forwards = patch_attention_layers(
+                self, attn_backend, None,
+            )
+        else:
+            self._static_kv_cache.zero_and_reset()
+            self._block_sparse_cache.reset()
+
+        static_cache = self._static_kv_cache
+        block_sparse_cache = self._block_sparse_cache
+        attn_backend = self._dynamo_attn_backend
+
+        # ---- Batch bucketing (fixed batch size) ----
+        bucket = BatchBucket(
+            batch_size=batch_size,
+            device=self.device,
+            pad_token_id=tokenizer.pad_token_id,
+        )
+
+        try:
+            # ---- Prefill (eager, original forward with eval_mask) ----
+            if min_len > block_size:
+                prefill_len = min_len // block_size * block_size
+                output = self.forward(
+                    input_ids=input_ids[:, :prefill_len],
+                    use_cache=True,
+                    past_key_values=static_cache,
+                    update_past_key_values=True,
+                    block_size=block_size,
+                )
+                logits = output.logits
+
+                if min_len % block_size == 0:
+                    predict_sample_idx = (seq_len == min_len)
+                    predict_logits = logits[predict_sample_idx, -1:, :]
+                    next_token = predict_logits.argmax(dim=-1)
+                    if input_ids.shape[1] <= min_len:
+                        input_ids = torch.cat([input_ids, next_token], dim=1)
+                    else:
+                        input_ids[predict_sample_idx, min_len] = next_token.squeeze(dim=-1)
+
+            seq_block_idx = seq_len // block_size
+            finished_flag = torch.zeros(batch_size, device=self.device, dtype=torch.bool)
+            start_block_idx = min_len // block_size
+            _dense_steps = 0
+            _sparse_steps = 0
+
+            # ---- Block generation loop ----
+            for block_idx in range(start_block_idx, num_blocks):
+                if bucket.all_finished():
+                    break
+
+                # Initialize current block
+                if (seq_block_idx == block_idx).all():
+                    pad_len = block_size - input_ids.shape[1] % block_size
+                    x_init = mask_id * torch.ones(
+                        (batch_size, pad_len), device=self.device, dtype=torch.long,
+                    )
+                    x_init = torch.cat([input_ids, x_init], dim=1)
+                    input_ids = x_init
+                else:
+                    x_init = input_ids[:, :(block_idx + 1) * block_size]
+
+                bucket.pad_finished_slots(x_init, block_size)
+                x_t = x_init.clone()
+
+                # Reset block sparse cache for this block
+                block_sparse_cache.reset()
+
+                # ---- Per-block setup: set tensor-valued control signals ----
+                past_len = static_cache.get_seq_length()
+                static_cache.set_kv_write_start(past_len)
+                static_cache.set_scratch_seqlens(past_len + block_size)
+                # Required before any diffusion forward: patched attention calls
+                # write_scratch_compiled(), which needs _scatter_idx from prepare_write_idx.
+                static_cache.prepare_write_idx(block_size)
+
+                step = 0
+                _block_dense = 0
+                _block_sparse = 0
+
+                # ---- Per-block dKV state ----
+                prv_transfer_idx = torch.zeros((x_t.shape[0], block_size), dtype=torch.bool, device=self.device)
+                cur_transfer_index = torch.zeros((x_t.shape[0], block_size), dtype=torch.bool, device=self.device)
+                step_in_block = 0
+
+                while True:
+                    if bucket.all_finished():
+                        break
+
+                    mask_idx = (x_t[:, -block_size:] == mask_id) & bucket.active_mask[:, None]
+
+                    # ---- Block complete: commit cache + bridge token ----
+                    if mask_idx.sum() == 0:
+                        for sample_idx in range(batch_size):
+                            if finished_flag[sample_idx] and seq_len[sample_idx] < (block_idx + 1) * block_size:
+                                post_seq = x_t[sample_idx, seq_len[sample_idx]:]
+                                stop_positions = (post_seq == stop_token).nonzero()
+                                if stop_positions.numel() > 0:
+                                    stop_pos = stop_positions[0][0]
+                                    x_t[sample_idx, seq_len[sample_idx] + stop_pos + 1:] = tokenizer.pad_token_id
+
+                        if bucket.all_finished():
+                            break
+
+                        # Commit step: eager forward with update_past_key_values=True
+                        output = self.forward(
+                            input_ids=x_t[:, -block_size:],
+                            use_cache=True,
+                            past_key_values=static_cache,
+                            update_past_key_values=True,
+                            block_size=block_size,
+                        )
+                        logits = output.logits
+                        next_token = logits[:, -1:, :].argmax(dim=-1)
+                        next_token[finished_flag] = tokenizer.pad_token_id
+                        x_t = torch.cat([x_t, next_token], dim=1)
+                        step += 1
+                        break
+
+                    # ---- Diffusion loop over sub-blocks ----
+                    for small_block_idx in range(num_small_blocks):
+                        small_block_start_idx = small_block_idx * small_block_size
+                        small_block_end_idx = small_block_start_idx + small_block_size
+
+                        start = -block_size + small_block_start_idx
+                        end = None if block_size == small_block_end_idx else -block_size + small_block_end_idx
+
+                        while True:
+                            mask_idx = (x_t[:, -block_size:] == mask_id) & bucket.active_mask[:, None]
+                            if mask_idx[:, start:end].sum() == 0 or bucket.all_finished():
+                                break
+
+                            # ---- dKV forward: full or partial ----
+                            is_full = (step_in_block <= 1) or (step_in_block % refresh_steps == 0)
+                            if is_full:
+                                output = self.forward_dkv_static(
+                                    input_ids=x_t[:, -block_size:],
+                                    use_cache=True,
+                                    past_key_values=static_cache,
+                                    update_past_key_values=False,
+                                    is_full_step=True,
+                                    attn_backend=attn_backend,
+                                )
+                                _block_dense += 1; _dense_steps += 1
+                            else:
+                                fed_indices, _ = self._dkv_fed_indices(prv_transfer_idx)
+                                output = self.forward_dkv_static(
+                                    input_ids=x_t[:, -block_size:],
+                                    use_cache=True,
+                                    past_key_values=static_cache,
+                                    update_past_key_values=False,
+                                    fed_indices=fed_indices,
+                                    is_full_step=False,
+                                    attn_backend=attn_backend,
+                                )
+                                _block_sparse += 1; _sparse_steps += 1
+                            step_in_block += 1
+
+                            logits = output.logits
+                            logits = torch.cat([logits[:, :1, :], logits[:, :-1, :]], dim=1)
+                            logits = logits[:, start:end]
+
+                            # ---- Sampling and unmasking ----
+                            x_1, p_1t = self.sample_with_top_p(logits, top_p=top_p, temperature=temperature)
+                            x1_p = torch.squeeze(
+                                torch.gather(p_1t, dim=-1, index=torch.unsqueeze(x_1, -1)), -1,
+                            )
+                            x1_p = torch.where(mask_idx[:, start:end], x1_p, -torch.inf)
+
+                            unmask_idx = (x1_p > threshold)
+                            max_prob_idx = x1_p.argmax(dim=-1)
+                            unmask_idx[torch.arange(x_1.shape[0], device=self.device), max_prob_idx] = True
+                            unmask_idx = unmask_idx & mask_idx[:, start:end]
+
+                            unmask_idx = unmask_idx & bucket.active_mask[:, None].expand_as(unmask_idx)
+
+                            x_t[:, start:end][unmask_idx] = x_1[unmask_idx]
+
+                            # Check for newly finished sequences
+                            finished_row_flags = ((x_1 == stop_token) & unmask_idx).any(dim=1)
+                            newly_finished = finished_row_flags & ~finished_flag
+                            finished_flag = finished_flag | finished_row_flags
+
+                            bucket.mark_finished_compacted(newly_finished, x_t)
+                            bucket.pad_finished_slots(x_t, block_size)
+
+                            step += 1
+
+                            # ---- dKV shift bookkeeping ----
+                            all_decoded = (x_t[:, -block_size:] != mask_id)
+                            prv_transfer_idx, cur_transfer_index = cur_transfer_index, all_decoded
+
+                # ---- Update input_ids ----
+                if input_ids.shape[1] == x_t.shape[1]:
+                    input_ids = x_t
+                else:
+                    input_ids[:, :(block_idx + 1) * block_size] = x_t[:, :-1]
+                    if (seq_block_idx == block_idx).all():
+                        input_ids = torch.cat([input_ids, x_t[:, -1:]], dim=1)
+                    else:
+                        if input_ids.shape[1] <= (block_idx + 1) * block_size:
+                            input_ids = x_t
+                        else:
+                            active_at_block = seq_block_idx == block_idx
+                            input_ids[active_at_block, (block_idx + 1) * block_size] = (
+                                x_t[active_at_block, (block_idx + 1) * block_size]
+                            )
+
+                seq_block_idx[seq_block_idx == block_idx] = block_idx + 1
+
+                # ---- Compact batch: remove finished sequences ----
+                if finished_flag.any() and not finished_flag.all():
+                    active_indices = bucket.compact()
+                    if active_indices is not None:
+                        input_ids = input_ids[active_indices]
+                        x_t = x_t[active_indices]
+                        seq_block_idx = seq_block_idx[active_indices]
+                        seq_len = seq_len[active_indices]
+                        finished_flag = finished_flag[active_indices]
+                        static_cache.compact_batch(active_indices)
+                        block_sparse_cache.compact_batch(active_indices)
+                        batch_size = bucket.batch_size
+
+            # ---- Collect all results ----
+            finished_samples = bucket.get_results(x_t)
+            assert len(finished_samples) == original_batch_size
+            return finished_samples
+
+        finally:
+            pass
+
+    @torch.no_grad()
     def batch_sample_focus_dynamic(
         self,
         input_ids,
@@ -1777,6 +2091,198 @@ class Fast_dLLM_QwenForCausalLM:
                     frozen = self._focus_update_frozen(frozen, mask_idx)
 
             if input_ids.shape[1] == x_t.shape[1]:
+                input_ids = x_t
+            else:
+                input_ids[:, :(block_idx + 1) * block_size] = x_t[:, :-1]
+                if (seq_block_idx == block_idx).all():
+                    input_ids = torch.cat([input_ids, x_t[:, -1:]], dim=1)
+                else:
+                    if input_ids.shape[1] <= (block_idx + 1) * block_size:
+                        input_ids = x_t
+                    else:
+                        input_ids[seq_block_idx == block_idx, (block_idx + 1) * block_size] = x_t[seq_block_idx == block_idx, (block_idx + 1) * block_size]
+            seq_block_idx[seq_block_idx == block_idx] = block_idx + 1
+            if finished_flag.any():
+                for sample_idx in range(x_t.shape[0]):
+                    if finished_flag[sample_idx]:
+                        original_idx = sample_indices[sample_idx].item()
+                        finished_samples[original_idx] = x_t[sample_idx:sample_idx + 1].clone().squeeze(dim=0)
+                sample_indices = sample_indices[~finished_flag]
+                input_ids = input_ids[~finished_flag]
+                seq_block_idx = seq_block_idx[~finished_flag]
+                seq_len = seq_len[~finished_flag]
+                x_t = x_t[~finished_flag]
+                for layer_id in range(len(past_key_values)):
+                    past_key_values.key_cache[layer_id] = past_key_values.key_cache[layer_id][~finished_flag]
+                    past_key_values.value_cache[layer_id] = past_key_values.value_cache[layer_id][~finished_flag]
+                finished_flag = finished_flag[~finished_flag]
+
+        if len(finished_samples) < batch_size:
+            for sample_idx in range(x_t.shape[0]):
+                original_idx = sample_indices[sample_idx].item()
+                finished_samples[original_idx] = x_t[sample_idx:sample_idx + 1].clone().squeeze(dim=0)
+        assert len(finished_samples) == batch_size
+        return finished_samples
+
+    @torch.no_grad()
+    def batch_sample_dkv(
+        self,
+        input_ids,
+        tokenizer,
+        block_size,
+        max_new_tokens,
+        small_block_size,
+        min_len,
+        seq_len,
+        mask_id=151665,
+        threshold=0.95,
+        stop_token=151645,
+        use_block_cache=False,
+        top_p=0.95,
+        temperature=0.0,
+    ):
+        """dKV-Cache batch sampling — BASELINE-FIRST (minimal deviation from ``batch_sample``).
+
+        Byte-for-byte identical to the dense ``batch_sample`` EXCEPT that, inside the
+        ``use_block_cache=False`` decode branch, the per-step ``self.forward(...)`` is
+        replaced by ``self.forward_dkv(..., dkv_store=block_kv)``. A per-block KV buffer
+        (``block_kv``, a ``DynamicBlockKV``) persists decoded-token K/V across diffusion
+        steps and is reset at each block boundary. One-step delay + periodic full refresh
+        (every ``refresh_steps`` steps; first two steps always full) prevent KV staleness.
+
+        The commit/bridge step, the sub-block (``small_block_size``) loop, and the
+        ``start:end`` windows are copied verbatim from ``batch_sample`` — nothing is
+        borrowed from the static sampler. At ``refresh_steps=1`` every step is a full
+        recompute, so the output must be byte-identical to ``batch_sample`` (the
+        validation gate: ``tests/diff_dkv_vs_baseline.py``).
+
+        Env: FAST_DLLM_DKV_REFRESH_STEPS (default 4).
+        """
+        from transformers.cache_utils import DynamicCache
+        from utils.dynamic_block_kv import DynamicBlockKV
+
+        refresh_steps = int(os.environ.get("FAST_DLLM_DKV_REFRESH_STEPS", "4"))
+        num_layers = self.config.num_hidden_layers
+        num_kv_heads = self.config.num_key_value_heads
+        head_dim = self.config.hidden_size // self.config.num_attention_heads
+
+        num_blocks = max_new_tokens // block_size + seq_len.max().item() // block_size
+        batch_size = input_ids.shape[0]
+
+        if min_len > block_size:
+            output = self.forward(input_ids=input_ids[:, :(min_len // block_size * block_size)], use_cache=True, update_past_key_values=True, block_size=block_size)
+            logits, past_key_values = output.logits, output.past_key_values
+            if min_len % block_size == 0:
+                predict_sample_idx = (seq_len == min_len)
+                predict_logits = logits[predict_sample_idx, -1:, :]
+                next_token = predict_logits.argmax(dim=-1)
+                if input_ids.shape[1] <= min_len:
+                    input_ids = torch.cat([input_ids, next_token], dim=1)
+                else:
+                    input_ids[predict_sample_idx, min_len] = next_token.squeeze(dim=-1)
+        else:
+            past_key_values = None
+
+        seq_block_idx = seq_len // block_size
+        finished_flag = torch.zeros((batch_size), device=self.device, dtype=torch.bool)
+
+        start_block_idx = min_len // block_size
+        num_small_blocks = block_size // small_block_size
+
+        sample_indices = torch.arange(batch_size, device=self.device)
+        finished_samples = {}
+        for block_idx in range(start_block_idx, num_blocks):
+            if finished_flag.all():
+                break
+            if (seq_block_idx == block_idx).all():
+                x_init = mask_id * torch.ones((input_ids.shape[0], block_size-input_ids.shape[1]%block_size), device=self.device, dtype=torch.long)
+                x_init = torch.cat([input_ids, x_init], dim=1)
+                input_ids = x_init
+            else:
+                x_init = input_ids[:, :(block_idx + 1)*block_size]
+
+            x_init[finished_flag, -block_size:] = tokenizer.pad_token_id
+            x_t = x_init.clone()
+            step = 0
+
+            # dKV: per-block KV buffer (reset at each block boundary) + one-step-delay
+            # bookkeeping. past_key_values must be a real Cache for forward_dkv's
+            # get_seq_length()/prefix-cat; an empty DynamicCache is equivalent to None.
+            if past_key_values is None:
+                past_key_values = DynamicCache()
+            block_kv = DynamicBlockKV(
+                deep_layer_start=0, num_layers=num_layers,
+                batch_size=x_t.shape[0], num_kv_heads=num_kv_heads, block_size=block_size,
+                head_dim=head_dim, dtype=self.dtype, device=self.device,
+            )
+            prv_transfer_idx = torch.zeros((x_t.shape[0], block_size), dtype=torch.bool, device=self.device)
+            cur_transfer_index = torch.zeros((x_t.shape[0], block_size), dtype=torch.bool, device=self.device)
+            step_in_block = 0
+
+            while True:
+                mask_idx = (x_t[:, -block_size:] == mask_id)
+                if mask_idx.sum() == 0:
+                    for sample_idx in range(x_t.shape[0]):
+                        if finished_flag[sample_idx] and seq_len[sample_idx] < (block_idx + 1) * block_size:
+                            stop_token_idx = (x_t[sample_idx, seq_len[sample_idx]:] == stop_token).nonzero()[0][0]
+                            x_t[sample_idx, seq_len[sample_idx]+stop_token_idx+1:] = tokenizer.pad_token_id
+                    if finished_flag.all():
+                        break
+                    output = self.forward(input_ids=x_t[:, -block_size:], use_cache=True, past_key_values=past_key_values, update_past_key_values=True, block_size=block_size)
+                    logits, past_key_values = output.logits, output.past_key_values
+                    next_token = logits[:, -1:, :].argmax(dim=-1)
+                    next_token[finished_flag] = tokenizer.pad_token_id
+                    x_t = torch.cat([x_t, next_token], dim=1)
+                    step += 1
+
+                    break
+
+                for small_block_idx in range(num_small_blocks):
+                    small_block_start_idx = small_block_idx * small_block_size
+                    small_block_end_idx = small_block_start_idx + small_block_size
+
+                    start = -block_size + small_block_start_idx
+                    end = None if block_size == small_block_end_idx else -block_size + small_block_end_idx
+                    while True:
+                        mask_idx = (x_t[:, -block_size:] == mask_id)
+                        if mask_idx[:, start:end].sum() == 0:
+                            break
+
+                        # dKV substitution for baseline's self.forward(update_past_key_values=False):
+                        # full recompute on refresh boundaries (and the first two steps); else feed
+                        # only the not-yet-frozen positions and read the rest from block_kv.
+                        is_full = (step_in_block <= 1) or (step_in_block % refresh_steps == 0)
+                        if is_full:
+                            output = self.forward_dkv(input_ids=x_t[:, -block_size:], use_cache=True, past_key_values=past_key_values, dkv_store=block_kv, is_full_step=True)
+                        else:
+                            fed_indices, _ = self._dkv_fed_indices(prv_transfer_idx)
+                            output = self.forward_dkv(input_ids=x_t[:, -block_size:], use_cache=True, past_key_values=past_key_values, dkv_store=block_kv, fed_indices=fed_indices, is_full_step=False)
+                        step_in_block += 1
+                        logits = output.logits
+                        logits = torch.cat([logits[:, :1, :], logits[:, :-1, :]], dim=1)
+                        logits = logits[:, start:end]
+                        x_1, p_1t = self.sample_with_top_p(logits, top_p=top_p, temperature=temperature)
+                        x1_p = torch.squeeze(torch.gather(p_1t, dim=-1, index=torch.unsqueeze(x_1, -1)), -1)
+                        x1_p = torch.where(mask_idx[:, start:end], x1_p, -torch.inf)
+
+                        unmask_idx = (x1_p > threshold)
+                        max_prob_idx = x1_p.argmax(dim=-1)
+                        unmask_idx[torch.arange(x_1.shape[0]), max_prob_idx] = True
+                        unmask_idx = unmask_idx & mask_idx[:, start:end]
+
+                        x_t[:, start:end][unmask_idx] = x_1[unmask_idx]
+
+                        finished_row_flags = ((x_1 == stop_token) & unmask_idx).any(dim=1) # shape: [B]
+                        finished_flag = finished_flag | finished_row_flags
+
+                        step += 1
+
+                        # one-step-delay bookkeeping over the WHOLE block (spans sub-blocks):
+                        # prv = positions decoded >=2 steps ago (frozen in block_kv).
+                        all_decoded = (x_t[:, -block_size:] != mask_id)
+                        prv_transfer_idx, cur_transfer_index = cur_transfer_index, all_decoded
+
+            if input_ids.shape[1] ==  x_t.shape[1]:
                 input_ids = x_t
             else:
                 input_ids[:, :(block_idx + 1) * block_size] = x_t[:, :-1]
